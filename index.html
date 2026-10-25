@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07070d">
+<title>Sekundenhit – Errate deutsche Songs in Sekunden</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+:root{
+  --bg:#07070d; --card:#12121f; --card2:#1a1a2e; --line:rgba(255,255,255,.09);
+  --text:#f4f4fb; --muted:#9a9ab8; --accent:#8b5cf6; --accent2:#ec4899; --cyan:#22d3ee;
+  --good:#34d399; --bad:#fb7185; --gold:#fbbf24;
+  --grad:linear-gradient(135deg,#8b5cf6 0%,#ec4899 100%);
+}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+body{min-height:100vh;min-height:100dvh;
+  background:
+    radial-gradient(900px 520px at 50% -8%,rgba(139,92,246,.30),transparent 62%),
+    radial-gradient(700px 480px at 105% 105%,rgba(236,72,153,.17),transparent 60%),
+    var(--bg);
+  background-attachment:fixed}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom))}
+.view{display:none}
+.view.active{display:block;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+
+/* ---------- Karten & Buttons ---------- */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015)),var(--card);
+  border:1px solid var(--line);border-radius:26px;padding:18px;margin-bottom:14px;
+  box-shadow:0 24px 60px -30px rgba(0,0,0,.9)}
+.card h2{margin:0 0 12px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-head h2{margin:0}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;padding:12px 18px;
+  border-radius:999px;border:1px solid var(--line);background:var(--card2);font-weight:700;font-size:16px;
+  transition:transform .12s ease,filter .2s ease,opacity .2s}
+.btn:hover:not(:disabled){filter:brightness(1.15)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 14px 34px -14px rgba(236,72,153,.75)}
+.btn.big{min-height:62px;font-size:18px;letter-spacing:.08em}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted);min-height:44px;font-weight:600}
+.btn.ghost:hover:not(:disabled){color:var(--text)}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card2);font-size:18px;
+  display:grid;place-items:center;flex:none}
+.link-btn{background:none;border:0;color:var(--muted);font-weight:600;padding:10px 6px;font-size:14px}
+.link-btn:hover{color:var(--text)}
+
+/* ---------- Menü ---------- */
+.hero{text-align:center;padding:22px 0 20px}
+.logo{display:inline-flex;align-items:flex-end;gap:5px;height:44px;margin-bottom:10px}
+.logo i{display:block;width:8px;height:100%;border-radius:6px;background:var(--grad);transform-origin:bottom;animation:eq 1.1s ease-in-out infinite}
+.logo i:nth-child(2){animation-delay:.15s}.logo i:nth-child(3){animation-delay:.3s}
+.logo i:nth-child(4){animation-delay:.45s}.logo i:nth-child(5){animation-delay:.6s}
+.hero h1{margin:0;font-size:clamp(34px,10vw,48px);font-weight:900;letter-spacing:-.02em;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin:8px auto 0;color:var(--muted);max-width:34ch;line-height:1.45}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.seg button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 6px;border-radius:20px;
+  border:1.5px solid var(--line);background:var(--card2);transition:.2s}
+.seg button .e{font-size:22px}
+.seg button b{font-size:15px}
+.seg button small{color:var(--muted);font-size:11px;text-align:center;line-height:1.25}
+.seg button.active{border-color:transparent;background:linear-gradient(var(--card2),var(--card2)) padding-box,var(--grad) border-box;
+  border:1.5px solid transparent;box-shadow:0 10px 30px -14px rgba(139,92,246,.9)}
+.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.chip{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:18px;border:1.5px solid var(--line);
+  background:var(--card2);font-weight:600;font-size:15px;text-align:left;transition:.2s}
+.chip .e{font-size:20px}
+.chip.active{border-color:transparent;background:linear-gradient(var(--card2),var(--card2)) padding-box,var(--grad) border-box;
+  border:1.5px solid transparent}
+.chip:not(.active){opacity:.6}
+.mini-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700}
+.mini-btn.active{border-color:transparent;background:var(--grad);color:#fff}
+.pool{margin:12px 2px 0;color:var(--muted);font-size:13px}
+.menu-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:6px}
+.check{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;margin-top:6px;cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+
+/* ---------- Spiel ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.round{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.top-right{display:flex;align-items:center;gap:8px}
+.streak{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:var(--card2);
+  border:1px solid var(--line);font-weight:700;font-size:14px}
+.player{padding-top:22px}
+.disc{position:relative;display:block;width:min(60vw,226px);aspect-ratio:1;margin:8px auto 14px;padding:0;border:0;
+  border-radius:50%;background:none;transition:transform .15s}
+.disc:active{transform:scale(.97)}
+.disc .ring{position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);transform:rotate(-90deg);pointer-events:none}
+.ring circle{fill:none;stroke-width:2.6;stroke-linecap:round}
+.ring-bg{stroke:rgba(255,255,255,.08)}
+.ring-fg{stroke-dasharray:295.31;stroke-dashoffset:295.31}
+.vinyl{position:absolute;inset:0;border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 31%,rgba(255,255,255,.05) 31.5%,transparent 33%),
+    repeating-radial-gradient(circle at 50% 50%,#0b0b17 0 2px,#16162b 3px 4px);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.05),0 26px 54px -22px rgba(139,92,246,.6)}
+.vinyl::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(transparent 0 20%,rgba(255,255,255,.08) 25%,transparent 30% 70%,rgba(255,255,255,.08) 75%,transparent 80%)}
+.disc.playing .vinyl{animation:spin 2.2s linear infinite}
+.disc-center{position:absolute;inset:29%;border-radius:50%;background:var(--grad);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;box-shadow:0 8px 30px rgba(236,72,153,.45);color:#fff}
+.disc-center .ico{font-size:clamp(22px,7vw,32px);line-height:1;padding-left:3px}
+.disc-center .time{font-weight:800;font-size:clamp(13px,3.6vw,17px);letter-spacing:.01em}
+.stage.loading .disc{animation:pulse 1.2s ease-in-out infinite;pointer-events:none}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:6px 0 4px}
+.step{text-align:center;font-size:12px;color:var(--muted);font-weight:600}
+.step i{display:block;height:6px;border-radius:99px;background:rgba(255,255,255,.1);margin-bottom:6px;transition:.35s}
+.step.done i{background:rgba(139,92,246,.55)}
+.step.current i{background:var(--grad);box-shadow:0 0 14px rgba(236,72,153,.65)}
+.step.current{color:var(--text);font-weight:800}
+.status{min-height:20px;margin:10px 0 0;text-align:center;font-size:13px;color:var(--muted)}
+.demo-note{margin:10px 0 0;padding:9px 12px;border-radius:14px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);
+  color:var(--gold);font-size:12.5px;line-height:1.4;text-align:center}
+.controls{margin-top:14px}
+.search{position:relative;margin-bottom:12px}
+.search input{width:100%;height:56px;border-radius:999px;border:1.5px solid var(--line);background:var(--card2);color:var(--text);
+  padding:0 20px 0 48px;font-size:16px;transition:border-color .2s}
+.search input::placeholder{color:#6f6f8f}
+.search input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 4px rgba(139,92,246,.18)}
+.search .s-ico{position:absolute;left:19px;top:50%;transform:translateY(-50%);font-size:17px;opacity:.7;pointer-events:none}
+.search.shake{animation:shake .4s}
+.suggest{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:20;margin:0;padding:6px;list-style:none;
+  max-height:min(300px,45vh);overflow:auto;border-radius:22px;background:#191930;border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 24px 50px -10px rgba(0,0,0,.85)}
+.suggest.up{top:auto;bottom:calc(100% + 8px)}
+.suggest li{padding:10px 14px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.suggest li b{font-size:15px;font-weight:700}
+.suggest li span{font-size:12.5px;color:var(--muted)}
+.suggest li.active,.suggest li:hover{background:rgba(139,92,246,.22)}
+.suggest li.empty{cursor:default;color:var(--muted);font-size:14px;background:none}
+.attempts{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.attempts li{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:14px;background:rgba(255,255,255,.04);font-size:13.5px;color:var(--muted);animation:fadeUp .25s both}
+.attempts li.wrong{color:#fda4af;background:rgba(251,113,133,.09)}
+.attempts li span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Ergebnis ---------- */
+.result{text-align:center;animation:fadeUp .45s both}
+.card .res-head{font-size:26px;font-weight:900;letter-spacing:-.01em;text-transform:none;margin:0 0 14px}
+.card .res-head.win{color:var(--good)}
+.card .res-head.lose{color:var(--gold)}
+.cover{width:min(54vw,196px);aspect-ratio:1;border-radius:22px;margin:0 auto 14px;overflow:hidden;background:var(--grad);
+  display:grid;place-items:center;font-size:56px;box-shadow:0 26px 50px -20px rgba(236,72,153,.6)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.res-title{font-size:22px;font-weight:800;line-height:1.2;margin:0}
+.res-artist{color:var(--muted);margin:4px 0 16px;font-size:16px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.fact{background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:12px 8px}
+.fact small{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.fact b{font-size:18px}
+.stars{display:flex;justify-content:center;gap:4px;font-size:44px;line-height:1;margin:2px 0 4px}
+.stars span{color:rgba(255,255,255,.14)}
+.stars span.on{color:var(--gold);text-shadow:0 0 22px rgba(251,191,36,.55);animation:pop .5s both}
+.rating-text{color:var(--muted);font-size:14px;margin:0 0 16px}
+.res-source{color:#6f6f8f;font-size:12px;margin:12px 0 0}
+.res-actions{display:flex;flex-direction:column;gap:10px}
+
+/* ---------- Modals & Toast ---------- */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(3,3,8,.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:0}
+.sheet{width:100%;max-width:560px;max-height:88vh;max-height:88dvh;overflow:auto;background:var(--card);border:1px solid var(--line);
+  border-radius:28px 28px 0 0;padding:20px 18px max(24px,env(safe-area-inset-bottom));animation:fadeUp .3s both}
+@media(min-width:600px){.modal{align-items:center}.sheet{border-radius:28px}}
+.sheet h3{margin:0;font-size:20px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:12px 8px;text-align:center}
+.tile b{display:block;font-size:22px;margin-bottom:2px}
+.tile small{color:var(--muted);font-size:11.5px;line-height:1.25;display:block}
+.sheet p,.sheet li{color:#cfcfe6;font-size:14px;line-height:1.55}
+.sheet h4{margin:18px 0 6px;font-size:14px;color:var(--text)}
+.sheet ul{padding-left:18px;margin:6px 0}
+.sheet pre{background:#0b0b16;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto;font-size:12.5px;line-height:1.5;color:#c4b5fd}
+.sheet code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px;font-size:12.5px}
+.diag{list-style:none;padding:0!important;margin:12px 0 0!important;display:flex;flex-direction:column;gap:6px}
+.diag li{padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.05);font-size:13.5px;line-height:1.4}
+.diag li.ok{color:#a7f3d0;background:rgba(52,211,153,.1)}
+.diag li.bad{color:#fecdd3;background:rgba(251,113,133,.1)}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,30px);opacity:0;pointer-events:none;
+  z-index:80;background:#22223a;border:1px solid rgba(255,255,255,.14);padding:12px 18px;border-radius:999px;font-weight:600;font-size:14px;
+  max-width:92vw;text-align:center;transition:.3s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{border-color:rgba(251,113,133,.5);color:#fecdd3}
+.toast.good{border-color:rgba(52,211,153,.5);color:#a7f3d0}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<noscript><p style="padding:24px">Bitte aktiviere JavaScript, um Sekundenhit zu spielen.</p></noscript>
+
+<div class="app">
+
+  <!-- ===================== MENÜ ===================== -->
+  <section id="view-menu" class="view active">
+    <header class="hero">
+      <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1>Sekundenhit</h1>
+      <p>Wie viele Sekunden brauchst du, um den deutschen Song zu erkennen?</p>
+    </header>
+
+    <div class="card">
+      <h2>Schwierigkeit</h2>
+      <div class="seg" id="diffSeg">
+        <button data-diff="easy"><span class="e">🟢</span><b>Leicht</b><small></small></button>
+        <button data-diff="medium"><span class="e">🟡</span><b>Mittel</b><small></small></button>
+        <button data-diff="hard"><span class="e">🔴</span><b>Schwer</b><small></small></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Genres</h2>
+        <button class="mini-btn" id="btnAll">Alle Genres</button>
+      </div>
+      <div class="chips" id="genreGrid"></div>
+      <p class="pool" id="poolInfo"></p>
+    </div>
+
+    <button class="btn primary big" id="btnStart">SPIEL STARTEN</button>
+
+    <div class="menu-foot">
+      <button class="link-btn" id="btnStatsMenu">📊 Statistik</button>
+      <button class="link-btn" id="btnInfo">ℹ️ Songs &amp; Audio</button>
+    </div>
+    <label class="check"><input type="checkbox" id="demoOnly"> Nur Demo-Töne (ohne Internet testen)</label>
+  </section>
+
+  <!-- ===================== SPIEL ===================== -->
+  <section id="view-game" class="view">
+    <div class="topbar">
+      <button class="icon-btn" id="btnBack" aria-label="Zurück zum Menü">←</button>
+      <div class="round" id="roundNo">Runde 1</div>
+      <div class="top-right">
+        <span class="streak" title="Aktueller Streak">🔥 <b id="streakVal">0</b></span>
+        <button class="icon-btn" id="btnStatsGame" aria-label="Statistik">📊</button>
+      </div>
+    </div>
+
+    <div class="card player">
+      <div id="stage" class="stage">
+        <button class="disc" id="disc" aria-label="Ausschnitt abspielen">
+          <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+            <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs>
+            <circle class="ring-bg" cx="50" cy="50" r="47"/>
+            <circle class="ring-fg" id="ringFg" cx="50" cy="50" r="47" stroke="url(#ringGrad)"/>
+          </svg>
+          <span class="vinyl"></span>
+          <span class="disc-center"><span class="ico" id="discIco">▶</span><span class="time" id="discTime">0,1 s</span></span>
+        </button>
+        <div class="steps" id="steps" aria-label="Zeitstufen"></div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <div class="demo-note" id="demoNote" hidden>🎧 Demo-Ton: Es werden Testmelodien statt echter Song-Ausschnitte gespielt (keine Audioquelle erreichbar oder Demo-Modus aktiv).</div>
+      </div>
+
+      <div id="controls" class="controls">
+        <div class="search" id="searchBox">
+          <span class="s-ico">🔍</span>
+          <input id="guess" type="text" placeholder="Song suchen…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Songtitel oder Interpret suchen">
+          <ul class="suggest" id="suggest" role="listbox" hidden></ul>
+        </div>
+        <button class="btn" id="btnSkip">Skip</button>
+        <button class="btn ghost" id="btnGiveUp">Aufgeben</button>
+        <ul class="attempts" id="attempts"></ul>
+      </div>
+
+      <div id="result" class="result" hidden>
+        <h2 class="res-head" id="resHead">🎉 Richtig!</h2>
+        <div class="cover" id="resCover">🎵</div>
+        <p class="res-title" id="resTitle"></p>
+        <p class="res-artist" id="resArtist"></p>
+        <div class="facts">
+          <div class="fact"><small id="resFoundLbl">Erraten nach</small><b id="resFound">1 Sekunde</b></div>
+          <div class="fact"><small>Mit</small><b id="resSkips">2 Skips</b></div>
+        </div>
+        <div class="stars" id="resStars" aria-label="Bewertung"></div>
+        <p class="rating-text" id="resRating"></p>
+        <div class="res-actions">
+          <button class="btn primary big" id="btnNext">NÄCHSTER SONG</button>
+          <button class="btn ghost" id="btnPreview">▶ Song anhören</button>
+        </div>
+        <p class="res-source" id="resSource"></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal" id="modalStats" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Statistik">
+    <div class="sheet-head"><h3>📊 Deine Statistik</h3><button class="icon-btn" data-close aria-label="Schließen">✕</button></div>
+    <div class="tiles" id="statTiles"></div>
+    <button class="btn ghost" id="btnResetStats">Statistik zurücksetzen</button>
+  </div>
+</div>
+
+<div class="modal" id="modalInfo" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Songs und Audio">
+    <div class="sheet-head"><h3>ℹ️ Songs &amp; Audio</h3><button class="icon-btn" data-close aria-label="Schließen">✕</button></div>
+    <h4>Verbindungstest</h4>
+    <p>Prüft, ob echte Song-Ausschnitte geladen werden können.</p>
+    <button class="btn" id="btnDiag" type="button">Verbindung testen</button>
+    <ul class="diag" id="diagOut"></ul>
+    <h4>Neue Songs hinzufügen</h4>
+    <p>Öffne die HTML-Datei in einem Editor und suche nach <code>HIER NEUE SONGS HINZUFÜGEN</code> (Array <code>RAW_SONGS</code>). Pro Song eine Zeile:</p>
+<pre>{ title:"Songtitel", artist:"Interpret",
+  genre:["Pop","Aktuell"],
+  popularity:8,        // 1–10: wie bekannt?
+  introDifficulty:4,   // 1–10: wie schwer ist der Anfang?
+  aliases:["Alt. Schreibweise"],   // optional
+  audioUrl:"", coverUrl:"", audioStart:0 }  // optional</pre>
+    <h4>Schwierigkeit</h4>
+    <p>Wird automatisch berechnet: <code>Score = 0,5 × (10 − popularity) + 0,5 × introDifficulty</code>. Unter 3,5 = leicht, ab 5,0 = schwer, dazwischen mittel. Ein sehr bekannter Song mit unscheinbarem Anfang landet so trotzdem auf „Schwer“. Mit <code>difficulty:"easy|medium|hard"</code> kannst du es pro Song überschreiben.</p>
+    <h4>Audioquellen (austauschbar)</h4>
+    <ul>
+      <li><b>audioUrl</b> am Song: eigene, rechtmäßig nutzbare Datei oder Stream (z. B. lizenziert oder Eigenproduktion).</li>
+      <li><b>iTunes-Vorschau</b> (Standard): kostenlose Apple-Search-API, kein Key, keine Dateien bei dir. Die Vorschau startet meist mitten im Song, nicht am echten Intro. Bitte die Nutzungsbedingungen von Apple beachten.</li>
+      <li><b>Demo-Ton</b>: automatischer Fallback, wenn keine Quelle erreichbar ist.</li>
+    </ul>
+    <p>Weitere Quellen baust du im Block <code>AUDIO_PROVIDERS</code> im Script ein.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+'use strict';
+
+// ==== LOGIC-START ====
+/* =====================================================================
+   1. KONFIGURATION
+   ===================================================================== */
+const CONFIG = {
+  LEVELS: [0.1, 0.5, 1, 2, 4],        // Ausschnittslängen in Sekunden = die Skip-Stufen
+  WRONG_GUESS_ADVANCES: true,         // true: falscher Tipp schaltet nächste Stufe frei und zählt als Skip
+  INTRO_WEIGHT: 0.5,                  // Gewicht von introDifficulty im Schwierigkeits-Score
+  DIFFICULTY_LIMITS: { easyBelow: 3.5, hardFrom: 5.0 },
+  ITUNES: { enabled: true, country: 'DE', cacheDays: 7 },
+  STORAGE: {
+    stats: 'sekundenhit.stats.v1',
+    settings: 'sekundenhit.settings.v1',
+    audioCache: 'sekundenhit.audiocache.v1'
+  }
+};
+
+const GENRES = [
+  { key: 'Hip-Hop',   label: 'Hip-Hop / Rap', emoji: '🎤' },
+  { key: 'Rock',      label: 'Rock',          emoji: '🎸' },
+  { key: 'Pop',       label: 'Pop',           emoji: '🎵' },
+  { key: 'Dance',     label: 'Dance',         emoji: '🪩' },
+  { key: 'Electro',   label: 'Electro',       emoji: '🎹' },
+  { key: 'Klassiker', label: 'Klassiker',     emoji: '❤️' },
+  { key: 'Aktuell',   label: 'Aktuell',       emoji: '🔥' },
+  { key: 'Sonstiges', label: 'Sonstiges',     emoji: '🎶' }
+];
+const GENRE_KEYS = GENRES.map(g => g.key);
+
+/* =====================================================================
+   2. SONG-DATENBANK
+   ---------------------------------------------------------------------
+   >>>>>>>>>>>>>>>>>>>>  HIER NEUE SONGS HINZUFÜGEN  <<<<<<<<<<<<<<<<<<<<
+   Vorlage (eine Zeile pro Song, Komma am Ende nicht vergessen):
+
+   { title:"Songtitel", artist:"Interpret", genre:["Pop","Aktuell"],
+     popularity:8, introDifficulty:4 },
+
+   Pflicht:  title, artist, genre (String oder Liste), popularity (1–10), introDifficulty (1–10)
+   Optional: aliases:["…"]          alternative Schreibweisen für die Suche
+             audioUrl:"https://…"   eigene, rechtmäßig nutzbare Audioquelle
+             audioStart:0           Startposition (Sek.) in der Audiodatei
+             coverUrl:"https://…"   eigenes Cover
+             difficulty:"hard"      überschreibt die automatische Berechnung
+   Genres: Hip-Hop, Rock, Pop, Dance, Electro, Klassiker, Aktuell, Sonstiges
+   ===================================================================== */
+const RAW_SONGS = [
+  // ---------- Hip-Hop / Rap ----------
+  { title:"Roller", artist:"Apache 207", genre:["Hip-Hop","Aktuell"], popularity:10, introDifficulty:3 },
+  { title:"Wieso tust du dir das an?", artist:"Apache 207", genre:["Hip-Hop","Aktuell"], popularity:8, introDifficulty:5 },
+  { title:"Komet", artist:"Udo Lindenberg & Apache 207", genre:["Hip-Hop","Pop","Aktuell"], popularity:9, introDifficulty:4 },
+  { title:"Easy", artist:"Cro", genre:["Hip-Hop","Pop"], popularity:10, introDifficulty:3 },
+  { title:"Traum", artist:"Cro", genre:["Hip-Hop","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Bad Chick", artist:"Cro", genre:["Hip-Hop"], popularity:7, introDifficulty:6 },
+  { title:"Du", artist:"Cro", genre:["Hip-Hop","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Alles neu", artist:"Peter Fox", genre:["Hip-Hop","Pop"], popularity:9, introDifficulty:4 },
+  { title:"Haus am See", artist:"Peter Fox", genre:["Hip-Hop","Pop"], popularity:10, introDifficulty:3 },
+  { title:"Zukunft Pink", artist:"Peter Fox", genre:["Hip-Hop","Pop"], popularity:6, introDifficulty:6 },
+  { title:"Die da!?!", artist:"Die Fantastischen Vier", genre:["Hip-Hop","Klassiker"], popularity:9, introDifficulty:4, aliases:["Die da","Fanta 4"] },
+  { title:"MfG", artist:"Die Fantastischen Vier", genre:["Hip-Hop","Pop"], popularity:8, introDifficulty:5, aliases:["Mit freundlichen Grüßen"] },
+  { title:"Tag am Meer", artist:"Die Fantastischen Vier", genre:["Hip-Hop","Pop"], popularity:7, introDifficulty:5, aliases:["Fanta 4"] },
+  { title:"Jein", artist:"Fettes Brot", genre:["Hip-Hop"], popularity:8, introDifficulty:5 },
+  { title:"Emanuela", artist:"Fettes Brot", genre:["Hip-Hop"], popularity:7, introDifficulty:6 },
+  { title:"Mein Block", artist:"Sido", genre:["Hip-Hop"], popularity:9, introDifficulty:4 },
+  { title:"Straßenjunge", artist:"Sido", genre:["Hip-Hop"], popularity:7, introDifficulty:6, aliases:["Strassenjunge"] },
+  { title:"Astronaut", artist:"Sido & Andreas Bourani", genre:["Hip-Hop","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Chabos wissen wer der Babo ist", artist:"Haftbefehl", genre:["Hip-Hop"], popularity:8, introDifficulty:5, aliases:["Babo"] },
+  { title:"Du bist Boss", artist:"Kollegah", genre:["Hip-Hop"], popularity:7, introDifficulty:5 },
+  { title:"Palmen aus Plastik", artist:"RAF Camora & Bonez MC", genre:["Hip-Hop"], popularity:8, introDifficulty:4 },
+  { title:"Weck mich auf", artist:"Samy Deluxe", genre:["Hip-Hop"], popularity:7, introDifficulty:5 },
+  { title:"Lila Wolken", artist:"Marteria, Yasha & Miss Platnum", genre:["Hip-Hop","Pop"], popularity:8, introDifficulty:5, aliases:["Marteria"] },
+  { title:"Kids (2 Finger an den Kopf)", artist:"Marteria", genre:["Hip-Hop"], popularity:7, introDifficulty:6, aliases:["Kids"] },
+  { title:"Hinterland", artist:"Casper", genre:["Hip-Hop","Rock"], popularity:7, introDifficulty:7 },
+  { title:"Im Ascheregen", artist:"Casper", genre:["Hip-Hop","Rock"], popularity:6, introDifficulty:8 },
+  { title:"NDW 2005", artist:"Fler", genre:["Hip-Hop"], popularity:6, introDifficulty:5 },
+  { title:"Hobby Hobby", artist:"Mero", genre:["Hip-Hop","Aktuell"], popularity:7, introDifficulty:4 },
+  { title:"Baller los", artist:"Mero", genre:["Hip-Hop","Aktuell"], popularity:8, introDifficulty:4 },
+  { title:"Party Sahne", artist:"Ski Aggu, Joost & Otto Waalkes", genre:["Dance","Hip-Hop","Aktuell"], popularity:8, introDifficulty:3 },
+  { title:"Was du Liebe nennst", artist:"Bausa", genre:["Hip-Hop"], popularity:7, introDifficulty:5 },
+  { title:"Ich darf das", artist:"Shirin David", genre:["Hip-Hop","Aktuell"], popularity:7, introDifficulty:4 },
+  { title:"Willst du", artist:"Alligatoah", genre:["Hip-Hop"], popularity:7, introDifficulty:5 },
+  { title:"Lass liegen", artist:"Alligatoah", genre:["Hip-Hop"], popularity:6, introDifficulty:6 },
+  { title:"Hurra die Welt geht unter", artist:"K.I.Z", genre:["Hip-Hop"], popularity:6, introDifficulty:6, aliases:["KIZ"] },
+  { title:"Klar", artist:"Jan Delay", genre:["Hip-Hop","Pop"], popularity:7, introDifficulty:6 },
+  { title:"Oh Jonny", artist:"Jan Delay", genre:["Hip-Hop","Pop"], popularity:6, introDifficulty:7 },
+  { title:"Wildberry Lillet", artist:"Nina Chuba", genre:["Hip-Hop","Pop","Aktuell"], popularity:8, introDifficulty:4 },
+  { title:"Fruit Ninja", artist:"Nina Chuba", genre:["Hip-Hop","Aktuell"], popularity:6, introDifficulty:6 },
+  { title:"Chaya", artist:"badmómzjay", genre:["Hip-Hop","Aktuell"], popularity:6, introDifficulty:5, aliases:["badmomzjay","Badmomzjay"] },
+  { title:"Nur in meinem Kopf", artist:"Kummer", genre:["Hip-Hop","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Dickes B", artist:"Seeed", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Ding", artist:"Seeed", genre:["Sonstiges"], popularity:7, introDifficulty:5 },
+  { title:"Aufstehn", artist:"Seeed", genre:["Sonstiges"], popularity:7, introDifficulty:5 },
+
+  // ---------- Rock ----------
+  { title:"Du hast", artist:"Rammstein", genre:["Rock"], popularity:10, introDifficulty:2 },
+  { title:"Sonne", artist:"Rammstein", genre:["Rock"], popularity:9, introDifficulty:2 },
+  { title:"Engel", artist:"Rammstein", genre:["Rock"], popularity:8, introDifficulty:3 },
+  { title:"Ich will", artist:"Rammstein", genre:["Rock"], popularity:8, introDifficulty:3 },
+  { title:"Deutschland", artist:"Rammstein", genre:["Rock"], popularity:9, introDifficulty:5 },
+  { title:"Du riechst so gut", artist:"Rammstein", genre:["Rock"], popularity:7, introDifficulty:5 },
+  { title:"Mein Herz brennt", artist:"Rammstein", genre:["Rock"], popularity:7, introDifficulty:4 },
+  { title:"Ohne dich", artist:"Rammstein", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Tage wie diese", artist:"Die Toten Hosen", genre:["Rock","Pop"], popularity:10, introDifficulty:3 },
+  { title:"Hier kommt Alex", artist:"Die Toten Hosen", genre:["Rock","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Opel-Gang", artist:"Die Toten Hosen", genre:["Rock","Klassiker"], popularity:7, introDifficulty:5 },
+  { title:"Kein Alkohol (ist auch keine Lösung)", artist:"Die Toten Hosen", genre:["Rock"], popularity:7, introDifficulty:5, aliases:["Kein Alkohol"] },
+  { title:"Altes Fieber", artist:"Die Toten Hosen", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Zehn kleine Jägermeister", artist:"Die Toten Hosen", genre:["Rock"], popularity:6, introDifficulty:5 },
+  { title:"Schrei nach Liebe", artist:"Die Ärzte", genre:["Rock"], popularity:9, introDifficulty:4 },
+  { title:"Westerland", artist:"Die Ärzte", genre:["Rock","Klassiker"], popularity:9, introDifficulty:4 },
+  { title:"Zu spät", artist:"Die Ärzte", genre:["Rock","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Junge", artist:"Die Ärzte", genre:["Rock"], popularity:8, introDifficulty:4 },
+  { title:"Männer sind Schweine", artist:"Die Ärzte", genre:["Rock"], popularity:7, introDifficulty:5 },
+  { title:"Lasse redn", artist:"Die Ärzte", genre:["Rock"], popularity:7, introDifficulty:5 },
+  { title:"Deine Schuld", artist:"Die Ärzte", genre:["Rock"], popularity:7, introDifficulty:5 },
+  { title:"Lied vom Scheitern", artist:"Die Ärzte", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Songs für Liam", artist:"Kraftklub", genre:["Rock"], popularity:7, introDifficulty:6 },
+  { title:"Ich will nicht nach Berlin", artist:"Kraftklub", genre:["Rock"], popularity:7, introDifficulty:5 },
+  { title:"Schüsse in die Luft", artist:"Kraftklub", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Du schreibst Geschichte", artist:"Madsen", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"54, 74, 90, 2006", artist:"Sportfreunde Stiller", genre:["Rock","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Ein Kompliment", artist:"Sportfreunde Stiller", genre:["Rock","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Applaus Applaus", artist:"Sportfreunde Stiller", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Nur ein Wort", artist:"Wir sind Helden", genre:["Rock","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Denkmal", artist:"Wir sind Helden", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Müssen nur wollen", artist:"Wir sind Helden", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Gekommen um zu bleiben", artist:"Wir sind Helden", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Durch den Monsun", artist:"Tokio Hotel", genre:["Rock","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Der letzte Tag", artist:"Tokio Hotel", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Übers Ende der Welt", artist:"Tokio Hotel", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Symphonie", artist:"Silbermond", genre:["Rock","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Das Beste", artist:"Silbermond", genre:["Rock","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Irgendwas bleibt", artist:"Silbermond", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Leichtes Gepäck", artist:"Silbermond", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Perfekte Welle", artist:"Juli", genre:["Rock","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Geile Zeit", artist:"Juli", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Dieses Jahr", artist:"Juli", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Halt dich an mir fest", artist:"Revolverheld", genre:["Rock","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Ich lass für dich das Licht an", artist:"Revolverheld", genre:["Rock","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Spinner", artist:"Revolverheld", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Ohne Dich", artist:"Selig", genre:["Rock","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Weinst du?", artist:"Echt", genre:["Rock","Pop","Klassiker"], popularity:6, introDifficulty:5 },
+  { title:"Du trägst keine Liebe in dir", artist:"Echt", genre:["Rock","Pop","Klassiker"], popularity:6, introDifficulty:5 },
+  { title:"Pure Vernunft darf niemals siegen", artist:"Tocotronic", genre:["Rock"], popularity:5, introDifficulty:7 },
+  { title:"König von Deutschland", artist:"Rio Reiser", genre:["Rock","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Rauch-Haus-Song", artist:"Ton Steine Scherben", genre:["Rock","Klassiker"], popularity:5, introDifficulty:6 },
+  { title:"Bologna", artist:"Wanda", genre:["Rock"], popularity:6, introDifficulty:6 },
+  { title:"Maschin", artist:"Bilderbuch", genre:["Rock","Pop"], popularity:6, introDifficulty:6 },
+  { title:"Was es ist", artist:"Mia.", genre:["Pop","Rock","Electro"], popularity:6, introDifficulty:6, aliases:["Mia"] },
+  { title:"Hurra, hurra, die Schule brennt", artist:"Extrabreit", genre:["Rock","Klassiker"], popularity:5, introDifficulty:6 },
+  { title:"Skandal im Sperrbezirk", artist:"Spider Murphy Gang", genre:["Rock","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Der goldene Reiter", artist:"Joachim Witt", genre:["Rock","Klassiker","Electro"], popularity:5, introDifficulty:6 },
+  { title:"Sexy", artist:"Marius Müller-Westernhagen", genre:["Rock","Klassiker"], popularity:7, introDifficulty:6, aliases:["Westernhagen"] },
+  { title:"Freiheit", artist:"Marius Müller-Westernhagen", genre:["Rock","Klassiker"], popularity:7, introDifficulty:5, aliases:["Westernhagen"] },
+  { title:"Sonderzug nach Pankow", artist:"Udo Lindenberg", genre:["Rock","Klassiker"], popularity:6, introDifficulty:5 },
+  { title:"Mein Ding", artist:"Udo Lindenberg", genre:["Rock","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Cello", artist:"Udo Lindenberg & Clueso", genre:["Pop","Rock"], popularity:6, introDifficulty:6 },
+  { title:"Und es war Sommer", artist:"Peter Maffay", genre:["Rock","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Bochum", artist:"Herbert Grönemeyer", genre:["Rock","Klassiker"], popularity:8, introDifficulty:5 },
+
+  // ---------- Pop ----------
+  { title:"99 Luftballons", artist:"Nena", genre:["Pop","Klassiker"], popularity:10, introDifficulty:3 },
+  { title:"Irgendwie, irgendwo, irgendwann", artist:"Nena", genre:["Pop","Klassiker"], popularity:8, introDifficulty:5 },
+  { title:"Nur geträumt", artist:"Nena", genre:["Pop","Klassiker"], popularity:7, introDifficulty:5 },
+  { title:"Leuchtturm", artist:"Nena", genre:["Pop"], popularity:7, introDifficulty:6 },
+  { title:"Wunder geschehn", artist:"Nena", genre:["Pop","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Männer", artist:"Herbert Grönemeyer", genre:["Pop","Klassiker"], popularity:9, introDifficulty:4 },
+  { title:"Mensch", artist:"Herbert Grönemeyer", genre:["Pop"], popularity:8, introDifficulty:5 },
+  { title:"Flugzeuge im Bauch", artist:"Herbert Grönemeyer", genre:["Pop","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Der Kommissar", artist:"Falco", genre:["Klassiker","Electro","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Jeanny", artist:"Falco", genre:["Klassiker","Pop"], popularity:8, introDifficulty:5 },
+  { title:"Major Tom (Völlig losgelöst)", artist:"Peter Schilling", genre:["Klassiker","Electro","Pop"], popularity:9, introDifficulty:4, aliases:["Völlig losgelöst","Major Tom"] },
+  { title:"Da Da Da", artist:"Trio", genre:["Klassiker","Electro"], popularity:8, introDifficulty:3, aliases:["Da Da Da ich lieb dich nicht du liebst mich nicht"] },
+  { title:"Blaue Augen", artist:"Ideal", genre:["Klassiker","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Jenseits von Eden", artist:"Nino de Angelo", genre:["Klassiker","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Ohne dich (schlaf ich heut Nacht nicht ein)", artist:"Münchener Freiheit", genre:["Klassiker","Pop"], popularity:7, introDifficulty:5, aliases:["Ohne dich schlaf ich heut nacht nicht ein"] },
+  { title:"Über sieben Brücken musst du gehn", artist:"Karat", genre:["Klassiker","Pop"], popularity:7, introDifficulty:6, aliases:["Über sieben Brücken"] },
+  { title:"Über den Wolken", artist:"Reinhard Mey", genre:["Klassiker","Sonstiges"], popularity:8, introDifficulty:4 },
+  { title:"1001 Nacht (Zwischen Wüste und Meer)", artist:"Klaus Lage", genre:["Klassiker","Pop"], popularity:6, introDifficulty:6, aliases:["Tausendundeine Nacht"] },
+  { title:"Sternenhimmel", artist:"Hubert Kah", genre:["Klassiker","Pop"], popularity:5, introDifficulty:6 },
+  { title:"Ich will Spaß", artist:"Markus", genre:["Klassiker","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Bruttosozialprodukt", artist:"Geier Sturzflug", genre:["Klassiker"], popularity:5, introDifficulty:5 },
+  { title:"Für mich soll's rote Rosen regnen", artist:"Hildegard Knef", genre:["Klassiker","Sonstiges"], popularity:6, introDifficulty:6 },
+  { title:"Er gehört zu mir", artist:"Marianne Rosenberg", genre:["Klassiker","Pop"], popularity:6, introDifficulty:5 },
+  { title:"Am Tag als Conny Kramer starb", artist:"Juliane Werding", genre:["Klassiker","Pop"], popularity:5, introDifficulty:6 },
+  { title:"Au revoir", artist:"Mark Forster & Sido", genre:["Pop","Hip-Hop"], popularity:9, introDifficulty:3 },
+  { title:"Chöre", artist:"Mark Forster", genre:["Pop"], popularity:8, introDifficulty:4 },
+  { title:"Flash mich", artist:"Mark Forster", genre:["Pop"], popularity:6, introDifficulty:6 },
+  { title:"Sowieso", artist:"Mark Forster", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"194 Länder", artist:"Mark Forster", genre:["Pop","Dance"], popularity:8, introDifficulty:4, aliases:["194 Laender"] },
+  { title:"Übermorgen", artist:"Mark Forster", genre:["Pop","Aktuell"], popularity:6, introDifficulty:6 },
+  { title:"Auf uns", artist:"Andreas Bourani", genre:["Pop"], popularity:9, introDifficulty:3 },
+  { title:"Hey", artist:"Andreas Bourani", genre:["Pop"], popularity:8, introDifficulty:5 },
+  { title:"Eisberg", artist:"Andreas Bourani", genre:["Pop"], popularity:6, introDifficulty:6 },
+  { title:"Feuerwerk", artist:"Wincent Weiss", genre:["Pop"], popularity:8, introDifficulty:4 },
+  { title:"Musik sein", artist:"Wincent Weiss", genre:["Pop","Aktuell"], popularity:7, introDifficulty:5 },
+  { title:"Lieblingsmensch", artist:"Namika", genre:["Pop"], popularity:8, introDifficulty:4 },
+  { title:"Leiser", artist:"LEA", genre:["Pop"], popularity:7, introDifficulty:5, aliases:["Lea"] },
+  { title:"Treppenhaus", artist:"LEA", genre:["Pop","Aktuell"], popularity:8, introDifficulty:4, aliases:["Lea"] },
+  { title:"Pocahontas", artist:"AnnenMayKantereit", genre:["Pop","Rock"], popularity:7, introDifficulty:6, aliases:["Annen May Kantereit","AMK"] },
+  { title:"21, 22, 23", artist:"AnnenMayKantereit", genre:["Pop","Rock"], popularity:5, introDifficulty:7, aliases:["Annen May Kantereit","AMK"] },
+  { title:"Barfuß am Klavier", artist:"AnnenMayKantereit", genre:["Pop","Rock"], popularity:7, introDifficulty:6, aliases:["Annen May Kantereit","AMK"] },
+  { title:"Wie schön du bist", artist:"Sarah Connor", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"Vincent", artist:"Sarah Connor", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"Nur noch kurz die Welt retten", artist:"Tim Bendzko", genre:["Pop"], popularity:9, introDifficulty:3 },
+  { title:"Wenn Worte meine Sprache wären", artist:"Tim Bendzko", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"80 Millionen", artist:"Max Giesinger", genre:["Pop"], popularity:8, introDifficulty:4 },
+  { title:"Wie soll ein Mensch das ertragen", artist:"Philipp Poisel", genre:["Pop"], popularity:7, introDifficulty:6 },
+  { title:"Gewinner", artist:"Clueso", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"Chicago", artist:"Clueso", genre:["Pop"], popularity:6, introDifficulty:6 },
+  { title:"Alles brennt", artist:"Johannes Oerding", genre:["Pop"], popularity:6, introDifficulty:6 },
+  { title:"Vom selben Stern", artist:"Ich + Ich", genre:["Pop"], popularity:8, introDifficulty:5, aliases:["Ich und Ich","Ich plus Ich"] },
+  { title:"Die immer lacht", artist:"Kerstin Ott", genre:["Pop"], popularity:8, introDifficulty:4 },
+  { title:"Frauen regier'n die Welt", artist:"Roger Cicero", genre:["Pop"], popularity:7, introDifficulty:5, aliases:["Frauen regieren die Welt"] },
+  { title:"Küssen verboten", artist:"Die Prinzen", genre:["Pop","Klassiker"], popularity:7, introDifficulty:5 },
+  { title:"Millionär", artist:"Die Prinzen", genre:["Pop","Klassiker"], popularity:8, introDifficulty:4, aliases:["Millionaer"] },
+  { title:"Alles nur geklaut", artist:"Die Prinzen", genre:["Pop","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Gabi und Klaus", artist:"Die Prinzen", genre:["Pop","Klassiker"], popularity:6, introDifficulty:5 },
+  { title:"Liebe ist alles", artist:"Rosenstolz", genre:["Pop"], popularity:7, introDifficulty:5 },
+  { title:"Ich bin ich (Wir sind wir)", artist:"Rosenstolz", genre:["Pop"], popularity:7, introDifficulty:5, aliases:["Ich bin ich"] },
+  { title:"Wovon sollen wir träumen", artist:"Frida Gold", genre:["Pop","Electro"], popularity:6, introDifficulty:5 },
+  { title:"Liebe ist meine Rebellion", artist:"Frida Gold", genre:["Pop","Electro"], popularity:5, introDifficulty:6 },
+  { title:"Mangos mit Chili", artist:"Nina Chuba", genre:["Pop","Aktuell"], popularity:7, introDifficulty:5 },
+
+  // ---------- Schlager / Sonstiges ----------
+  { title:"Atemlos durch die Nacht", artist:"Helene Fischer", genre:["Sonstiges","Pop"], popularity:10, introDifficulty:3 },
+  { title:"Phänomen", artist:"Helene Fischer", genre:["Sonstiges","Pop"], popularity:8, introDifficulty:4 },
+  { title:"Fehlerfrei", artist:"Helene Fischer", genre:["Sonstiges","Pop"], popularity:7, introDifficulty:5 },
+  { title:"Du hast mich 1000 Mal belogen", artist:"Andrea Berg", genre:["Sonstiges"], popularity:8, introDifficulty:4, aliases:["Du hast mich tausendmal belogen"] },
+  { title:"Santa Maria", artist:"Roland Kaiser", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Dich zu lieben", artist:"Roland Kaiser", genre:["Sonstiges","Klassiker"], popularity:7, introDifficulty:5 },
+  { title:"Verlieben, verloren, vergessen, verzeih'n", artist:"Wolfgang Petry", genre:["Sonstiges","Klassiker"], popularity:7, introDifficulty:5, aliases:["Verlieben verloren vergessen verzeihn"] },
+  { title:"Wahnsinn", artist:"Wolfgang Petry", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Verdammt, ich lieb' dich", artist:"Matthias Reim", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4, aliases:["Verdammt ich lieb dich"] },
+  { title:"Ein Bett im Kornfeld", artist:"Jürgen Drews", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Ein Stern (der deinen Namen trägt)", artist:"DJ Ötzi & Nik P.", genre:["Sonstiges"], popularity:8, introDifficulty:4, aliases:["Ein Stern","DJ Oetzi"] },
+  { title:"Anton aus Tirol", artist:"DJ Ötzi", genre:["Sonstiges","Dance"], popularity:8, introDifficulty:4, aliases:["DJ Oetzi"] },
+  { title:"Das geht ab! (Wir feiern die ganze Nacht)", artist:"Die Atzen", genre:["Dance","Sonstiges"], popularity:7, introDifficulty:4, aliases:["Das geht ab"] },
+  { title:"In der Weihnachtsbäckerei", artist:"Rolf Zuckowski", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Blau, blau, blau blüht der Enzian", artist:"Heino", genre:["Sonstiges","Klassiker"], popularity:6, introDifficulty:6 },
+  { title:"Jetzt ist Sommer", artist:"Wise Guys", genre:["Sonstiges","Pop"], popularity:5, introDifficulty:6 },
+  { title:"Aber bitte mit Sahne", artist:"Udo Jürgens", genre:["Sonstiges","Klassiker"], popularity:7, introDifficulty:5 },
+  { title:"Griechischer Wein", artist:"Udo Jürgens", genre:["Sonstiges","Klassiker"], popularity:8, introDifficulty:4 },
+  { title:"Merci, Chérie", artist:"Udo Jürgens", genre:["Sonstiges","Klassiker"], popularity:7, introDifficulty:5, aliases:["Merci Cherie"] },
+  { title:"Ich war noch niemals in New York", artist:"Udo Jürgens", genre:["Sonstiges","Klassiker"], popularity:9, introDifficulty:4 },
+
+  // ---------- Dance / Electro ----------
+  { title:"Herz an Herz", artist:"Blümchen", genre:["Dance","Klassiker"], popularity:7, introDifficulty:4, aliases:["Bluemchen"] },
+  { title:"Heut' ist mein Tag", artist:"Blümchen", genre:["Dance","Klassiker"], popularity:6, introDifficulty:5, aliases:["Bluemchen","Heut ist mein Tag"] },
+  { title:"Hamma!", artist:"Culcha Candela", genre:["Dance","Hip-Hop"], popularity:7, introDifficulty:4, aliases:["Hammer"] },
+  { title:"Remmidemmi (Yippie Yippie Yeah)", artist:"Deichkind", genre:["Electro","Hip-Hop"], popularity:8, introDifficulty:4, aliases:["Remmidemmi","Yippie Yippie Yeah"] },
+  { title:"Leider geil", artist:"Deichkind", genre:["Electro","Hip-Hop"], popularity:7, introDifficulty:5 },
+  { title:"Bück dich hoch", artist:"Deichkind", genre:["Electro","Hip-Hop"], popularity:6, introDifficulty:5 },
+  { title:"Das Model", artist:"Kraftwerk", genre:["Electro","Klassiker"], popularity:7, introDifficulty:6 },
+  { title:"Die Roboter", artist:"Kraftwerk", genre:["Electro","Klassiker"], popularity:6, introDifficulty:5 },
+  { title:"Autobahn", artist:"Kraftwerk", genre:["Electro","Klassiker"], popularity:7, introDifficulty:7 },
+  { title:"Der Mussolini", artist:"DAF", genre:["Electro","Klassiker"], popularity:5, introDifficulty:7, aliases:["Deutsch Amerikanische Freundschaft"] },
+  { title:"Hyper Hyper", artist:"Scooter", genre:["Dance","Electro"], popularity:8, introDifficulty:3 },
+  { title:"How Much Is the Fish?", artist:"Scooter", genre:["Dance","Electro"], popularity:8, introDifficulty:3 },
+  { title:"Maria (I Like It Loud)", artist:"Scooter", genre:["Dance","Electro"], popularity:6, introDifficulty:6 },
+  { title:"Evacuate the Dancefloor", artist:"Cascada", genre:["Dance"], popularity:6, introDifficulty:5 },
+  { title:"Sugar", artist:"Robin Schulz & Francesco Yates", genre:["Dance","Electro"], popularity:7, introDifficulty:5 },
+  { title:"Ain't Nobody (Loves Me Better)", artist:"Felix Jaehn & Jasmine Thompson", genre:["Dance","Electro"], popularity:7, introDifficulty:5, aliases:["Aint Nobody"] },
+  { title:"She Moves (Far Away)", artist:"Alle Farben & Graham Candy", genre:["Dance","Electro"], popularity:6, introDifficulty:7 },
+  { title:"Sky and Sand", artist:"Paul Kalkbrenner", genre:["Electro"], popularity:7, introDifficulty:5, aliases:["Fritz Kalkbrenner"] },
+  { title:"Aaron", artist:"Paul Kalkbrenner", genre:["Electro"], popularity:5, introDifficulty:7 }
+];
+
+/* =====================================================================
+   3. REINE LOGIK (Normalisierung, Suche, Schwierigkeit, Bewertung)
+   ===================================================================== */
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+/** Vereinheitlicht Text für die Suche: klein, ohne Umlaute/Akzente/Sonderzeichen. "Männer" = "maenner" = "manner". */
+function fold(str) {
+  return String(str == null ? '' : str)
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const GENRE_ALIASES = {
+  'hip hop':'Hip-Hop', 'hiphop':'Hip-Hop', 'rap':'Hip-Hop', 'deutschrap':'Hip-Hop', 'hip hop rap':'Hip-Hop',
+  'rock':'Rock', 'pop':'Pop', 'dance':'Dance', 'electro':'Electro', 'elektro':'Electro', 'electronic':'Electro',
+  'klassiker':'Klassiker', 'classic':'Klassiker', 'aktuell':'Aktuell', 'current':'Aktuell',
+  'sonstiges':'Sonstiges', 'schlager':'Sonstiges', 'other':'Sonstiges'
+};
+const GENRE_ALIAS_MAP = Object.fromEntries(Object.entries(GENRE_ALIASES).map(([k, v]) => [fold(k), v]));
+const normalizeGenre = (g) => GENRE_ALIAS_MAP[fold(g)] || null;
+
+/** Schwierigkeits-Score aus Bekanntheit UND Intro-Schwierigkeit (0,5 … 9,5). Höher = schwerer. */
+function difficultyScore(s) {
+  const pop = clamp(Number(s.popularity == null ? 5 : s.popularity), 1, 10);
+  const intro = clamp(Number(s.introDifficulty == null ? 5 : s.introDifficulty), 1, 10);
+  const w = CONFIG.INTRO_WEIGHT;
+  return (1 - w) * (10 - pop) + w * intro;
+}
+function difficultyOf(s) {
+  if (s.difficulty === 'easy' || s.difficulty === 'medium' || s.difficulty === 'hard') return s.difficulty; // manuelle Überschreibung
+  const sc = difficultyScore(s);
+  if (sc < CONFIG.DIFFICULTY_LIMITS.easyBelow) return 'easy';
+  if (sc >= CONFIG.DIFFICULTY_LIMITS.hardFrom) return 'hard';
+  return 'medium';
+}
+
+function prepareSongs(raw) {
+  const seen = new Set();
+  const out = [];
+  raw.forEach((r) => {
+    if (!r || !r.title || !r.artist) { console.warn('Song ohne title/artist übersprungen:', r); return; }
+    const genres = [].concat(r.genre || []).map(normalizeGenre).filter(Boolean);
+    if (!genres.length) genres.push('Sonstiges');
+    let id = r.id || fold(r.artist + ' ' + r.title).replace(/ /g, '-');
+    while (seen.has(id)) id += '-x';
+    seen.add(id);
+    const aliases = [].concat(r.aliases || []);
+    const aliasKeys = aliases.map(fold).filter(Boolean);
+    const titleKey = fold(r.title), artistKey = fold(r.artist);
+    const words = new Set([].concat(titleKey.split(' '), artistKey.split(' '), ...aliasKeys.map(a => a.split(' '))).filter(Boolean));
+    out.push({
+      id, title: r.title, artist: r.artist, genres,
+      popularity: r.popularity, introDifficulty: r.introDifficulty,
+      score: difficultyScore(r), difficulty: difficultyOf(r),
+      aliases, audioUrl: r.audioUrl || '', audioStart: Number(r.audioStart) || 0, coverUrl: r.coverUrl || '',
+      _titleKey: titleKey, _artistKey: artistKey, _aliasKeys: aliasKeys,
+      _words: Array.from(words), _combined: artistKey + ' ' + titleKey
+    });
+  });
+  return out;
+}
+const SONGS = prepareSongs(RAW_SONGS);
+
+function levenshtein(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < rowMin) rowMin = cur[j];
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function tokenScore(t, words) {
+  let best = 0;
+  const tol = t.length >= 8 ? 2 : (t.length >= 4 ? 1 : 0);
+  for (const w of words) {
+    let sc = 0;
+    if (w === t) sc = 100;
+    else if (w.startsWith(t)) sc = 80;
+    else if (t.length >= 3 && w.includes(t)) sc = 40;
+    else if (tol) {
+      const d = levenshtein(t, w, tol);
+      if (d <= tol) sc = 62 - 10 * d;
+      else if (w.length > t.length) {
+        const d2 = levenshtein(t, w.slice(0, t.length), tol);
+        if (d2 <= tol) sc = 52 - 10 * d2;
+      }
+    }
+    if (sc > best) best = sc;
+  }
+  return best;
+}
+
+function scoreSong(qTokens, q, s) {
+  let total = 0;
+  for (const t of qTokens) {
+    const sc = tokenScore(t, s._words);
+    if (!sc) return 0;                       // alle Suchwörter müssen (ungefähr) passen
+    total += sc;
+  }
+  const titleKeys = [s._titleKey].concat(s._aliasKeys);
+  if (titleKeys.some(k => k === q)) total += 120;
+  else if (titleKeys.some(k => k.startsWith(q))) total += 60;
+  if (s._artistKey.startsWith(q)) total += 30;
+  if (s._combined.includes(q)) total += 40;
+  return total;
+}
+
+/** Intelligente Suche über Titel, Interpret und alternative Schreibweisen (tolerant gegenüber Tippfehlern). */
+function searchSongs(query, songs, opts) {
+  const o = opts || {};
+  const q = fold(query);
+  if (q.length < 2) return [];
+  const qTokens = q.split(' ');
+  const res = [];
+  for (const s of songs) {
+    if (o.exclude && o.exclude.has(s.id)) continue;
+    const sc = scoreSong(qTokens, q, s);
+    if (sc > 0) res.push({ s, sc });
+  }
+  res.sort((a, b) => b.sc - a.sc || a.s.title.localeCompare(b.s.title, 'de'));
+  return res.slice(0, o.limit || 6).map(r => r.s);
+}
+
+const fmtSeconds = (s) => String(s).replace('.', ',');
+const secondsLabel = (s) => (s === 1 ? '1 Sekunde' : fmtSeconds(s) + ' Sekunden');
+const skipsLabel = (n) => (n === 1 ? '1 Skip' : n + ' Skips');
+/** Sterne: 0 Skips = 5 … 4 Skips = 1. Aufgegeben = 0. */
+const starsFor = (skips, won) => (won ? clamp(5 - skips, 1, 5) : 0);
+const poolFor = (difficulty, genreSet) => SONGS.filter(s => s.difficulty === difficulty && s.genres.some(g => genreSet.has(g)));
+// ==== LOGIC-END ====
+
+/* =====================================================================
+   4. SPEICHER (localStorage, ohne Account)
+   ===================================================================== */
+const Store = {
+  load(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? Object.assign({}, fallback, JSON.parse(v)) : Object.assign({}, fallback); }
+    catch (e) { return Object.assign({}, fallback); }
+  },
+  save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* z. B. privater Modus */ } }
+};
+const DEFAULT_STATS = { played: 0, correct: 0, gaveUp: 0, skipsSum: 0, secondsSum: 0, streak: 0, bestStreak: 0, perfect: 0, fiveStar: 0 };
+let stats = Store.load(CONFIG.STORAGE.stats, DEFAULT_STATS);
+let settings = Store.load(CONFIG.STORAGE.settings, { difficulty: 'easy', genres: GENRE_KEYS.slice(), demoOnly: false });
+settings.genres = (settings.genres || []).filter(g => GENRE_KEYS.includes(g));
+if (!settings.genres.length) settings.genres = GENRE_KEYS.slice();
+if (!['easy', 'medium', 'hard'].includes(settings.difficulty)) settings.difficulty = 'easy';
+
+/* =====================================================================
+   5. AUDIO-ENGINE (WebAudio für sekundengenaue Ausschnitte, Fallback: <audio>)
+   ===================================================================== */
+const AudioEngine = (() => {
+  let ctx = null, master = null, active = null;
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function getCtx() {
+    if (ctx) return ctx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+    return ctx;
+  }
+
+  /** Muss direkt in einem Klick/Tap aufgerufen werden (Browser-Autoplay-Regeln, iOS). */
+  function unlock() {
+    const c = getCtx();
+    if (!c) return;
+    try { if (c.state !== 'running') c.resume(); } catch (e) {}
+    try { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {}
+  }
+
+  function decode(arr) {
+    const c = getCtx();
+    return new Promise((res, rej) => {
+      const p = c.decodeAudioData(arr, res, rej);
+      if (p && p.catch) p.catch(rej);
+    });
+  }
+
+  async function fetchBuffer(url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.arrayBuffer();
+    } finally { clearTimeout(t); }
+  }
+
+  function loadElement(url, offset) {
+    return new Promise((resolve, reject) => {
+      const a = new Audio();
+      a.preload = 'auto';
+      a.volume = 0.9;
+      const timer = setTimeout(() => { cleanup(); reject(new Error('Audio-Timeout')); }, 15000);
+      function cleanup() { clearTimeout(timer); a.removeEventListener('canplay', ok); a.removeEventListener('error', fail); }
+      function ok() { cleanup(); resolve({ kind: 'element', el: a, offset: offset || 0, duration: (isFinite(a.duration) ? a.duration : 30) - (offset || 0) }); }
+      function fail() { cleanup(); reject(new Error('Audio-Fehler')); }
+      a.addEventListener('canplay', ok, { once: true });
+      a.addEventListener('error', fail, { once: true });
+      a.src = url;
+      a.load();
+    });
+  }
+
+  /** Lädt eine Audioquelle. Bevorzugt dekodierte Buffer (präzise), sonst <audio>-Element. */
+  async function loadTrack(url, offset) {
+    offset = offset || 0;
+    if (getCtx()) {
+      try {
+        const buf = await decode(await fetchBuffer(url));
+        return { kind: 'buffer', buffer: buf, offset, duration: Math.max(0.1, buf.duration - offset) };
+      } catch (e) { /* z. B. CORS → Fallback unten */ }
+    }
+    return loadElement(url, offset);
+  }
+
+  // --- Demo-Ton: deterministische Melodie pro Song (nur Testzwecke) ---
+  function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function synthTrack(seed) {
+    const c = getCtx();
+    if (!c) throw new Error('Kein WebAudio verfügbar');
+    const sr = c.sampleRate, secs = 10, len = Math.floor(sr * secs);
+    const buf = c.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    const rnd = mulberry32(hashStr(seed));
+    const scale = rnd() < 0.5 ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+    const root = 110 * Math.pow(2, Math.floor(rnd() * 12) / 12);
+    const step = [0.125, 0.15, 0.1875, 0.25][Math.floor(rnd() * 4)];
+    const h2 = 0.1 + rnd() * 0.6, h3 = rnd() * 0.4, decay = 5 + rnd() * 6;
+    let idx = Math.floor(rnd() * 7);
+    const steps = [-2, -1, -1, 0, 1, 1, 2, 3];
+    const nSteps = Math.floor(secs / step);
+    const TWO_PI = Math.PI * 2;
+    for (let n = 0; n < nSteps; n++) {
+      idx = (idx + steps[Math.floor(rnd() * steps.length)] + 14) % 14;
+      const semi = scale[idx % 7] + 12 * Math.floor(idx / 7);
+      const bass = n % 4 === 0;
+      const f = root * Math.pow(2, semi / 12) * (bass ? 1 : 2);
+      const start = Math.floor(n * step * sr);
+      const noteLen = Math.min(len - start, Math.floor(step * 1.7 * sr));
+      for (let i = 0; i < noteLen; i++) {
+        const t = i / sr;
+        const env = Math.min(1, t / 0.003) * Math.exp(-t * decay);
+        const ph = TWO_PI * f * t;
+        d[start + i] += (Math.sin(ph) + h2 * Math.sin(2 * ph) + h3 * Math.sin(3 * ph)) * env * (bass ? 0.3 : 0.2);
+      }
+    }
+    let peak = 0;
+    for (let i = 0; i < len; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; }
+    if (peak > 0) { const g = 0.8 / peak; for (let i = 0; i < len; i++) d[i] *= g; }
+    return { kind: 'buffer', buffer: buf, offset: 0, duration: secs, synthetic: true };
+  }
+
+  function stop() {
+    const a = active;
+    active = null;
+    if (!a) return;
+    if (a.raf) cancelAnimationFrame(a.raf);
+    try { a.stop && a.stop(); } catch (e) {}
+  }
+
+  /**
+   * Spielt die ersten `seconds` Sekunden des Tracks. cb: onStart, onProgress(0..1), onEnd, onBlocked.
+   * Gibt true zurück, wenn die Wiedergabe tatsächlich gestartet wurde.
+   */
+  async function play(track, seconds, cb) {
+    cb = cb || {};
+    stop();
+    const token = {};
+    active = token;
+    const dur = Math.max(0.05, Math.min(seconds, track.duration));
+
+    if (track.kind === 'buffer') {
+      const c = getCtx();
+      if (c.state !== 'running') { try { await Promise.race([c.resume(), sleep(400)]); } catch (e) {} }
+      if (active !== token) return false;
+      if (c.state !== 'running') { active = null; cb.onBlocked && cb.onBlocked(); return false; }
+      const src = c.createBufferSource();
+      src.buffer = track.buffer;
+      const g = c.createGain();
+      src.connect(g); g.connect(master);
+      const t0 = c.currentTime + 0.03;
+      const fade = Math.min(0.012, dur / 4);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(1, t0 + 0.004);
+      g.gain.setValueAtTime(1, t0 + dur - fade);
+      g.gain.linearRampToValueAtTime(0, t0 + dur);
+      src.start(t0, track.offset, dur);
+      token.stop = () => { try { src.stop(); } catch (e) {} try { src.disconnect(); g.disconnect(); } catch (e) {} };
+      cb.onStart && cb.onStart();
+      const tick = () => {
+        if (active !== token) return;
+        const p = (c.currentTime - t0) / dur;
+        if (p >= 1) { active = null; cb.onProgress && cb.onProgress(1); cb.onEnd && cb.onEnd(); return; }
+        cb.onProgress && cb.onProgress(Math.max(0, p));
+        token.raf = requestAnimationFrame(tick);
+      };
+      token.raf = requestAnimationFrame(tick);
+      return true;
+    }
+
+    // Fallback: <audio>-Element (z. B. wenn der Server kein CORS erlaubt)
+    const a = track.el;
+    try { a.pause(); a.currentTime = track.offset || 0; } catch (e) {}
+    try { const pr = a.play(); if (pr && pr.then) await pr; }
+    catch (e) { if (active === token) active = null; cb.onBlocked && cb.onBlocked(); return false; }
+    if (active !== token) { try { a.pause(); } catch (e) {} return false; }
+    const t0 = performance.now();
+    token.stop = () => { try { a.pause(); } catch (e) {} };
+    cb.onStart && cb.onStart();
+    const tick = () => {
+      if (active !== token) return;
+      const p = (performance.now() - t0) / 1000 / dur;
+      if (p >= 1) { try { a.pause(); } catch (e) {} active = null; cb.onProgress && cb.onProgress(1); cb.onEnd && cb.onEnd(); return; }
+      cb.onProgress && cb.onProgress(p);
+      token.raf = requestAnimationFrame(tick);
+    };
+    token.raf = requestAnimationFrame(tick);
+    return true;
+  }
+
+  return { unlock, loadTrack, synthTrack, play, stop };
+})();
+
+/* =====================================================================
+   5b. AUDIO-QUELLEN (austauschbar)
+   ---------------------------------------------------------------------
+   Reihenfolge: 1) song.audioUrl  2) iTunes-Vorschau  3) Demo-Ton (Fallback)
+   Eine neue Quelle einzubauen heißt: ein Objekt zu AUDIO_PROVIDERS hinzufügen.
+   resolve(song) liefert { url, cover?, offset? } oder null (nicht gefunden)
+   und wirft einen Fehler mit err.network = true, wenn die Quelle nicht erreichbar ist.
+   ===================================================================== */
+function jsonp(url, timeout) {
+  return new Promise((resolve, reject) => {
+    const cb = '__sh_cb_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); reject(new Error('JSONP-Timeout')); }, timeout || 9000);
+    function cleanup() { clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } s.remove(); }
+    window[cb] = (data) => { cleanup(); resolve(data); };
+    s.onerror = () => { cleanup(); reject(new Error('JSONP-Fehler')); };
+    s.src = url + '&callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+async function fetchJson(url) {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 9000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } finally { clearTimeout(t); }
+  } catch (e) { return await jsonp(url); }   // Fallback ohne CORS
+}
+
+const audioCache = Store.load(CONFIG.STORAGE.audioCache, {});
+function cacheGet(id) {
+  const e = audioCache[id];
+  if (!e) return undefined;
+  const ttl = (e.miss ? 1 : CONFIG.ITUNES.cacheDays) * 864e5;
+  if (Date.now() - e.t > ttl) { delete audioCache[id]; return undefined; }
+  return e;
+}
+function cacheSet(id, v) { audioCache[id] = Object.assign({}, v, { t: Date.now() }); Store.save(CONFIG.STORAGE.audioCache, audioCache); }
+
+const mainTitle = (t) => t.replace(/\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim();
+const overlap = (tokens, set) => { if (!tokens.length) return 0; let n = 0; tokens.forEach(t => { if (set.has(t)) n++; }); return n / tokens.length; };
+function pickItunesMatch(results, song) {
+  const tTok = fold(mainTitle(song.title)).split(' ').filter(Boolean);
+  let aTok = fold(song.artist).split(' ').filter(w => w.length > 2 && !['und', 'feat', 'the'].includes(w));
+  if (!aTok.length) aTok = fold(song.artist).split(' ').filter(Boolean);
+  const junk = /\b(live|remix|karaoke|instrumental|cover|tribute|acoustic|akustik|version|edit)\b/;
+  let best = null, bestScore = 0;
+  for (const r of results) {
+    if (!r.previewUrl) continue;
+    const rt = new Set(fold(mainTitle(r.trackName || '')).split(' '));
+    const ra = new Set(fold((r.artistName || '') + ' ' + (r.collectionArtistName || '')).split(' '));
+    const to = overlap(tTok, rt), ao = overlap(aTok, ra);
+    if (to < 0.6 || ao < 0.5) continue;
+    let sc = to * 0.6 + ao * 0.4;
+    if (junk.test(fold(r.trackName || '')) && !junk.test(fold(song.title))) sc -= 0.25;
+    if (sc > bestScore) { bestScore = sc; best = r; }
+  }
+  return best;
+}
+
+const AUDIO_PROVIDERS = [
+  {
+    id: 'url', label: 'Eigene Audioquelle',
+    async resolve(song) { return song.audioUrl ? { url: song.audioUrl, offset: song.audioStart, cover: song.coverUrl } : null; }
+  },
+  {
+    id: 'itunes', label: 'Apple iTunes-Vorschau',
+    enabled: () => CONFIG.ITUNES.enabled,
+    async resolve(song) {
+      const cached = cacheGet(song.id);
+      if (cached) return cached.miss ? null : { url: cached.url, cover: cached.cover, offset: 0 };
+      const term = song.artist + ' ' + song.title;
+      const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=10&country=' + CONFIG.ITUNES.country + '&term=' + encodeURIComponent(term);
+      let data;
+      try { data = await fetchJson(url); }
+      catch (e) { const err = new Error('iTunes nicht erreichbar'); err.network = true; throw err; }
+      const hit = pickItunesMatch((data && data.results) || [], song);
+      if (!hit) { cacheSet(song.id, { miss: true }); return null; }
+      const out = { url: hit.previewUrl, cover: (hit.artworkUrl100 || '').replace('100x100', '400x400') };
+      cacheSet(song.id, out);
+      return { url: out.url, cover: out.cover, offset: 0 };
+    }
+  }
+];
+
+const providerDownUntil = {};
+/** Liefert { track, source, label, cover } oder null (wenn allowDemo=false und keine echte Quelle gefunden wurde). */
+async function resolveAudio(song, opts) {
+  const o = Object.assign({ demoOnly: false, allowDemo: true }, opts);
+  const issues = [];                                     // Gründe, warum keine echte Quelle klappte (für die Anzeige)
+  try {
+    if (!o.demoOnly) {
+      for (const p of AUDIO_PROVIDERS) {
+        if (p.enabled && !p.enabled()) continue;
+        if ((providerDownUntil[p.id] || 0) > Date.now()) { issues.push(p.id + ':network'); continue; }
+        try {
+          const hit = await p.resolve(song);
+          if (!hit) { if (p.id !== 'url') issues.push(p.id + ':nomatch'); continue; }
+          const track = await AudioEngine.loadTrack(hit.url, hit.offset || 0);
+          return { track, source: p.id, label: p.label, cover: song.coverUrl || hit.cover || '' };
+        } catch (e) {
+          issues.push(p.id + (e && e.network ? ':network' : ':load'));
+          if (e && e.network) providerDownUntil[p.id] = Date.now() + 60000;   // 60 s Pause bei Netzproblemen
+          console.warn('[audio]', p.id, song.title, e && e.message);
+        }
+      }
+    }
+    if (!o.allowDemo && !o.demoOnly) return null;
+    return { track: AudioEngine.synthTrack(song.id), source: 'demo', label: 'Demo-Ton (kein echter Song)', cover: song.coverUrl || '',
+             issue: o.demoOnly ? 'demoOnly' : issues.join(' ') };
+  } catch (e) { console.warn('[audio] fatal', e); return null; }
+}
+
+/* =====================================================================
+   6. SPIELLOGIK
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+const session = { round: 0, played: new Set(), history: [], queue: null };
+const audioJobs = new Map();
+let round = null;          // aktuelle Runde
+let roundToken = 0;        // macht veraltete asynchrone Ergebnisse ungültig
+
+function saveStats() { Store.save(CONFIG.STORAGE.stats, stats); }
+function saveSettings() { Store.save(CONFIG.STORAGE.settings, settings); }
+
+function pickSong() {
+  const pool = poolFor(settings.difficulty, new Set(settings.genres));
+  if (!pool.length) return null;
+  let cand = pool.filter(s => !session.played.has(s.id));
+  if (!cand.length) {                                   // alles gespielt → Verlauf zurücksetzen, letzte Songs bleiben gesperrt
+    const n = Math.min(3, pool.length - 1);
+    session.played = new Set(n > 0 ? session.history.slice(-n) : []);
+    cand = pool.filter(s => !session.played.has(s.id));
+  }
+  const s = cand[Math.floor(Math.random() * cand.length)];
+  session.played.add(s.id);
+  session.history.push(s.id);
+  return s;
+}
+
+function getAudio(song, allowDemo) {
+  let job = audioJobs.get(song.id);
+  if (!job) {
+    job = resolveAudio(song, { demoOnly: settings.demoOnly, allowDemo });
+    audioJobs.set(song.id, job);
+  }
+  return job.then(r => { audioJobs.delete(song.id); return r; });
+}
+function prefetchNext() {
+  const s = pickSong();
+  session.queue = s;
+  if (s) getAudio(s, false);
+}
+
+/* ---------- Runde starten ---------- */
+async function beginRound() {
+  const token = ++roundToken;
+  AudioEngine.stop();
+  round = { song: null, audio: null, level: 0, skips: 0, wrongGuesses: 0, wrongIds: new Set(), attempts: [], status: 'loading' };
+  render();
+  let song = null, audio = null;
+  for (let i = 0; i < 4 && !audio; i++) {
+    song = session.queue || pickSong();
+    session.queue = null;
+    if (!song) break;
+    audio = await getAudio(song, false);
+    if (token !== roundToken) return;
+  }
+  if (!audio && song) {
+    audio = await resolveAudio(song, { demoOnly: settings.demoOnly, allowDemo: true });
+    if (token !== roundToken) return;
+  }
+  if (!audio || !song) {
+    toast('Kein Audio verfügbar. Nutzt dein Browser WebAudio?', 'bad');
+    showView('menu'); renderMenu();
+    return;
+  }
+  round.song = song;
+  round.audio = audio;
+  round.status = 'playing';
+  render();
+  playCurrent();
+  prefetchNext();
+}
+
+function demoReason(issue) {
+  const s = String(issue || '');
+  if (s === 'demoOnly') return 'Grund: Im Menü ist „Nur Demo-Töne“ angehakt – Haken entfernen.';
+  if (s.includes('itunes:network')) return 'Grund: Apple (iTunes) ist von hier aus nicht erreichbar. Öffne die Datei direkt im Browser (Chrome, Edge, Firefox, Safari) und nicht in einer Vorschau. Mehr Infos: Menü → „Songs & Audio“ → „Verbindung testen“.';
+  if (s.includes('itunes:load')) return 'Grund: Die Vorschau wurde gefunden, ließ sich aber nicht laden. Menü → „Songs & Audio“ → „Verbindung testen“ zeigt mehr.';
+  if (s.includes('itunes:nomatch')) return 'Grund: Für diesen Song gab es bei Apple keine Vorschau.';
+  return 'Grund unbekannt – Menü → „Songs & Audio“ → „Verbindung testen“.';
+}
+
+function nextRound() { session.round++; beginRound(); }
+
+function startGame() {
+  AudioEngine.unlock();                                  // im Klick-Handler → Autoplay erlaubt
+  saveSettings();
+  session.round = 0; session.played = new Set(); session.history = []; session.queue = null;
+  audioJobs.clear();
+  showView('game');
+  nextRound();
+}
+
+/* ---------- Wiedergabe ---------- */
+function setRing(p) { $('ringFg').style.strokeDashoffset = String(295.31 * (1 - clamp(p, 0, 1))); }
+function setPlaying(on) { $('disc').classList.toggle('playing', !!on); if (!on) setRing(0); }
+
+async function playCurrent() {
+  if (!round || round.status !== 'playing') return;
+  const secs = CONFIG.LEVELS[round.level];
+  setRing(0);
+  await AudioEngine.play(round.audio.track, secs, {
+    onStart: () => setPlaying(true),
+    onProgress: setRing,
+    onEnd: () => setPlaying(false),
+    onBlocked: () => { setPlaying(false); $('status').textContent = 'Tippe auf die Scheibe ▶, um den Ausschnitt abzuspielen.'; }
+  });
+}
+
+/* ---------- Aktionen ---------- */
+function skip() {
+  if (!round || round.status !== 'playing') return;
+  if (round.level >= CONFIG.LEVELS.length - 1) return;
+  round.level++;
+  round.skips++;                                         // Skip zählt NUR beim tatsächlichen Weitergehen
+  round.attempts.push({ type: 'skip' });
+  render();
+  playCurrent();
+}
+
+function submitGuess(song) {
+  if (!round || round.status !== 'playing') return;
+  closeSuggest();
+  $('guess').value = '';
+  if (song.id === round.song.id) { finishRound(true); return; }
+  round.wrongGuesses++;
+  round.wrongIds.add(song.id);
+  round.attempts.push({ type: 'wrong', text: song.title + ' – ' + song.artist });
+  const canAdvance = CONFIG.WRONG_GUESS_ADVANCES && round.level < CONFIG.LEVELS.length - 1;
+  if (canAdvance) { round.level++; round.skips++; }
+  const box = $('searchBox'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  toast(canAdvance ? 'Leider falsch – nächster Ausschnitt freigeschaltet' : 'Leider falsch – versuch es weiter', 'bad');
+  render();
+  if (canAdvance) playCurrent();
+}
+
+function giveUp() { if (round && round.status === 'playing') finishRound(false); }
+
+function finishRound(won) {
+  const r = round;
+  AudioEngine.stop();
+  setPlaying(false);
+  r.status = won ? 'won' : 'gaveup';
+  r.stars = starsFor(r.skips, won);
+  r.secondsUnlocked = CONFIG.LEVELS[r.level];
+  stats.played++;
+  if (won) {
+    stats.correct++;
+    stats.skipsSum += r.skips;
+    stats.secondsSum += r.secondsUnlocked;
+    stats.streak++;
+    if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
+    if (r.skips === 0 && r.wrongGuesses === 0) stats.perfect++;
+    if (r.stars === 5) stats.fiveStar++;
+  } else {
+    stats.gaveUp++;
+    stats.streak = 0;
+  }
+  saveStats();
+  render();
+  $('result').scrollIntoView && $('result').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/* ---------- Rendering Spielansicht ---------- */
+const RATING_TEXT = ['Nicht erraten – beim nächsten Song klappt’s!', 'Knapp geschafft!', 'Geschafft!', 'Gut gehört!', 'Stark!', 'Perfekt – direkt erkannt!'];
+
+function render() {
+  $('roundNo').textContent = 'Runde ' + Math.max(1, session.round);
+  $('streakVal').textContent = stats.streak;
+  const r = round;
+  if (!r) return;
+  const loading = r.status === 'loading';
+  const done = r.status === 'won' || r.status === 'gaveup';
+  const L = CONFIG.LEVELS;
+
+  $('stage').hidden = done;
+  $('controls').hidden = done;
+  $('result').hidden = !done;
+  $('stage').classList.toggle('loading', loading);
+
+  // Scheibe & Stufen
+  $('discTime').textContent = fmtSeconds(L[r.level]) + ' s';
+  $('discIco').textContent = loading ? '…' : '▶';
+  document.querySelectorAll('#steps .step').forEach((s, i) => {
+    s.classList.toggle('done', i < r.level);
+    s.classList.toggle('current', i === r.level);
+  });
+  $('status').textContent = loading ? 'Song wird geladen…' : 'Höre genau hin – oder skippe für mehr Zeit.';
+  const isDemo = !!(r.audio && r.audio.source === 'demo');
+  $('demoNote').hidden = !isDemo;
+  if (isDemo) $('demoNote').textContent = '🎧 Testmelodie statt echtem Song. ' + demoReason(r.audio.issue);
+
+  // Bedienelemente
+  const last = r.level >= L.length - 1;
+  $('guess').disabled = loading;
+  $('btnGiveUp').disabled = loading;
+  $('btnSkip').disabled = loading || last;
+  $('btnSkip').textContent = last ? 'Letzte Stufe erreicht' : 'Skip  →  ' + fmtSeconds(L[r.level + 1]) + ' s';
+
+  // Versuche
+  const ul = $('attempts');
+  ul.textContent = '';
+  r.attempts.forEach((a) => {
+    const li = el('li', a.type === 'wrong' ? 'wrong' : '');
+    li.appendChild(el('span', '', a.type === 'wrong' ? '✗' : '⏭'));
+    li.appendChild(el('span', 't', a.type === 'wrong' ? a.text : 'Übersprungen'));
+    ul.appendChild(li);
+  });
+
+  if (done) renderResult();
+}
+
+function renderResult() {
+  const r = round, s = r.song, won = r.status === 'won';
+  $('resHead').textContent = won ? '🎉 Richtig!' : '🏳️ Aufgegeben';
+  $('resHead').className = 'res-head ' + (won ? 'win' : 'lose');
+  $('resTitle').textContent = s.title;
+  $('resArtist').textContent = s.artist;
+  $('resFoundLbl').textContent = won ? 'Erraten nach' : 'Aufgegeben bei';
+  $('resFound').textContent = secondsLabel(r.secondsUnlocked);
+  $('resSkips').textContent = skipsLabel(r.skips);
+  $('resRating').textContent = (won ? 'Bewertung: ' + r.stars + ' von 5 Sternen – ' : '') + RATING_TEXT[r.stars];
+
+  const stars = $('resStars');
+  stars.textContent = '';
+  for (let i = 1; i <= 5; i++) {
+    const sp = el('span', i <= r.stars ? 'on' : '', '★');
+    if (i <= r.stars) sp.style.animationDelay = (i * 0.09) + 's';
+    stars.appendChild(sp);
+  }
+  stars.setAttribute('aria-label', r.stars + ' von 5 Sternen');
+
+  const cover = $('resCover');
+  cover.textContent = '';
+  const cu = r.audio && r.audio.cover;
+  if (cu) {
+    const img = new Image();
+    img.alt = 'Cover von ' + s.title;
+    img.onerror = () => { cover.textContent = '🎵'; };
+    img.src = cu;
+    cover.appendChild(img);
+  } else cover.textContent = '🎵';
+
+  $('resSource').textContent = 'Audioquelle: ' + (r.audio ? r.audio.label : '–');
+  $('btnPreview').textContent = '▶ Song anhören';
+  $('btnPreview').hidden = false;
+}
+
+let previewing = false;
+function togglePreview() {
+  if (!round || !round.audio) return;
+  const b = $('btnPreview');
+  if (previewing) { AudioEngine.stop(); previewing = false; b.textContent = '▶ Song anhören'; return; }
+  previewing = true;
+  b.textContent = '■ Stopp';
+  const done = () => { previewing = false; b.textContent = '▶ Song anhören'; };
+  AudioEngine.play(round.audio.track, round.audio.track.duration, { onEnd: done, onBlocked: done }).then(ok => { if (!ok && previewing) done(); });
+}
+
+/* ---------- Suche / Vorschläge ---------- */
+let suggestItems = [], suggestIdx = -1;
+function closeSuggest() { const u = $('suggest'); u.hidden = true; u.textContent = ''; suggestItems = []; suggestIdx = -1; }
+function placeSuggest() {
+  const input = $('guess'), u = $('suggest');
+  const rect = input.getBoundingClientRect();
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const needed = Math.min(300, 62 * Math.max(1, suggestItems.length) + 16);
+  u.classList.toggle('up', vh - rect.bottom < needed && rect.top > needed);
+}
+function renderSuggest() {
+  const u = $('suggest');
+  const q = $('guess').value;
+  suggestItems = searchSongs(q, SONGS, { limit: 6, exclude: round ? round.wrongIds : null });
+  suggestIdx = suggestItems.length ? 0 : -1;
+  u.textContent = '';
+  if (!suggestItems.length) {
+    if (fold(q).length < 2) { closeSuggest(); return; }
+    u.appendChild(el('li', 'empty', 'Keine Treffer – prüfe die Schreibweise'));
+  } else {
+    suggestItems.forEach((s, i) => {
+      const li = el('li', i === suggestIdx ? 'active' : '');
+      li.setAttribute('role', 'option');
+      li.appendChild(el('b', '', s.title));
+      li.appendChild(el('span', '', s.artist));
+      li.addEventListener('pointerdown', (e) => { e.preventDefault(); });
+      li.addEventListener('click', () => submitGuess(s));
+      u.appendChild(li);
+    });
+  }
+  u.hidden = false;
+  placeSuggest();
+}
+function moveSuggest(d) {
+  if (!suggestItems.length) return;
+  suggestIdx = (suggestIdx + d + suggestItems.length) % suggestItems.length;
+  $('suggest').querySelectorAll('li').forEach((li, i) => li.classList.toggle('active', i === suggestIdx));
+  const act = $('suggest').children[suggestIdx];
+  if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest' });
+}
+
+/* ---------- Menü ---------- */
+const DIFF_DESC = { easy: 'Große Hits', medium: 'Bekannt, aber knifflig', hard: 'Nur für Profis' };
+function renderMenu() {
+  const set = new Set(settings.genres);
+  document.querySelectorAll('#diffSeg button').forEach((b) => {
+    const d = b.dataset.diff;
+    b.classList.toggle('active', d === settings.difficulty);
+    b.querySelector('small').textContent = DIFF_DESC[d] + ' · ' + poolFor(d, set).length;
+  });
+  document.querySelectorAll('#genreGrid button').forEach(b => b.classList.toggle('active', set.has(b.dataset.genre)));
+  $('btnAll').classList.toggle('active', set.size === GENRE_KEYS.length);
+  const n = poolFor(settings.difficulty, set).length;
+  $('poolInfo').textContent = n
+    ? n + (n === 1 ? ' Song' : ' Songs') + ' im Pool' + (n < 5 ? ' – wähle mehr Genres für mehr Abwechslung' : '')
+    : 'Keine Songs für diese Auswahl – wähle weitere Genres oder eine andere Schwierigkeit.';
+  $('btnStart').disabled = n === 0;
+  $('demoOnly').checked = !!settings.demoOnly;
+}
+
+function showView(name) {
+  $('view-menu').classList.toggle('active', name === 'menu');
+  $('view-game').classList.toggle('active', name === 'game');
+  window.scrollTo(0, 0);
+}
+function backToMenu() {
+  roundToken++;
+  AudioEngine.stop(); setPlaying(false); closeSuggest();
+  round = null;
+  showView('menu'); renderMenu();
+}
+
+/* ---------- Statistik & Modals ---------- */
+function openStats() {
+  const c = stats.correct;
+  const tiles = [
+    [stats.played, 'Gespielte Songs'],
+    [stats.correct, 'Richtige Antworten'],
+    [stats.gaveUp, 'Aufgegebene Songs'],
+    [c ? (stats.skipsSum / c).toFixed(1).replace('.', ',') : '–', 'Ø Skips (bei Treffern)'],
+    [stats.bestStreak, 'Bester Streak'],
+    [stats.streak, 'Aktueller Streak'],
+    [c ? (stats.secondsSum / c).toFixed(1).replace('.', ',') + ' s' : '–', 'Ø benötigte Zeit'],
+    [stats.perfect, 'Perfekte Antworten'],
+    [stats.fiveStar, '5-Sterne-Runden']
+  ];
+  const wrap = $('statTiles');
+  wrap.textContent = '';
+  tiles.forEach(([v, l]) => { const t = el('div', 'tile'); t.appendChild(el('b', '', String(v))); t.appendChild(el('small', '', l)); wrap.appendChild(t); });
+  $('modalStats').hidden = false;
+}
+function closeModals() { $('modalStats').hidden = true; $('modalInfo').hidden = true; }
+
+async function runDiagnostics() {
+  const out = $('diagOut'), btn = $('btnDiag');
+  out.textContent = '';
+  btn.disabled = true; btn.textContent = 'Teste …';
+  Object.keys(providerDownUntil).forEach(k => delete providerDownUntil[k]);
+  const add = (ok, text) => out.appendChild(el('li', ok ? 'ok' : 'bad', (ok ? '✓ ' : '✗ ') + text));
+  AudioEngine.unlock();
+  let embedded = false;
+  try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
+  add(!embedded, embedded ? 'Die Seite läuft in einer eingebetteten Vorschau. Dort sind Internetzugriffe oft gesperrt – öffne die Datei direkt im Browser.' : 'Die Seite läuft direkt im Browser.');
+  add(navigator.onLine !== false, navigator.onLine === false ? 'Das Gerät meldet: kein Internet.' : 'Das Gerät meldet: Internet vorhanden.');
+  let hit = null;
+  try {
+    const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=5&country=' + CONFIG.ITUNES.country + '&term=' + encodeURIComponent('Apache 207 Roller');
+    const data = await fetchJson(url);
+    const res = (data && data.results) || [];
+    add(res.length > 0, res.length > 0 ? 'Apple-Suche erreichbar (' + res.length + ' Treffer).' : 'Apple-Suche erreichbar, aber ohne Treffer.');
+    hit = res.find(r => r.previewUrl) || null;
+  } catch (e) { add(false, 'Apple-Suche nicht erreichbar (' + ((e && e.message) || 'Fehler') + ').'); }
+  if (hit) {
+    try {
+      const t = await AudioEngine.loadTrack(hit.previewUrl, 0);
+      add(true, 'Vorschau geladen (' + Math.round(t.duration) + ' s, ' + (t.kind === 'buffer' ? 'präzise Wiedergabe' : 'einfache Wiedergabe') + ').');
+    } catch (e) { add(false, 'Vorschau konnte nicht geladen werden (' + ((e && e.message) || 'Fehler') + ').'); }
+  }
+  btn.disabled = false; btn.textContent = 'Verbindung erneut testen';
+}
+
+function toast(msg, kind) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind || '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2300);
+}
+
+/* ---------- Initialisierung ---------- */
+function init() {
+  // Zeitstufen
+  const steps = $('steps');
+  CONFIG.LEVELS.forEach((s) => { const d = el('div', 'step'); d.appendChild(document.createElement('i')); d.appendChild(el('span', '', fmtSeconds(s) + ' s')); steps.appendChild(d); });
+
+  // Genre-Chips
+  const grid = $('genreGrid');
+  GENRES.forEach((g) => {
+    const b = el('button', 'chip'); b.dataset.genre = g.key; b.type = 'button';
+    b.appendChild(el('span', 'e', g.emoji)); b.appendChild(el('span', '', g.label));
+    b.addEventListener('click', () => {
+      const set = new Set(settings.genres);
+      if (set.has(g.key)) { if (set.size === 1) { toast('Mindestens ein Genre muss aktiv bleiben'); return; } set.delete(g.key); } else set.add(g.key);
+      settings.genres = GENRE_KEYS.filter(k => set.has(k));
+      saveSettings(); renderMenu();
+    });
+    grid.appendChild(b);
+  });
+  $('btnAll').addEventListener('click', () => { settings.genres = GENRE_KEYS.slice(); saveSettings(); renderMenu(); });
+  document.querySelectorAll('#diffSeg button').forEach(b => b.addEventListener('click', () => { settings.difficulty = b.dataset.diff; saveSettings(); renderMenu(); }));
+  $('demoOnly').addEventListener('change', (e) => { settings.demoOnly = e.target.checked; saveSettings(); });
+
+  $('btnStart').addEventListener('click', startGame);
+  $('btnBack').addEventListener('click', backToMenu);
+  $('btnStatsMenu').addEventListener('click', openStats);
+  $('btnStatsGame').addEventListener('click', openStats);
+  $('btnInfo').addEventListener('click', () => { $('modalInfo').hidden = false; });
+  $('btnDiag').addEventListener('click', runDiagnostics);
+  $('btnResetStats').addEventListener('click', () => {
+    if (confirm('Statistik wirklich zurücksetzen?')) { stats = Object.assign({}, DEFAULT_STATS); saveStats(); openStats(); render(); }
+  });
+  document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', (e) => { if (e.target === m || e.target.hasAttribute('data-close')) closeModals(); }));
+
+  $('disc').addEventListener('click', () => { AudioEngine.unlock(); playCurrent(); });   // erneutes Anhören: KEIN Skip
+  $('btnSkip').addEventListener('click', skip);
+  $('btnGiveUp').addEventListener('click', giveUp);
+  $('btnNext').addEventListener('click', () => { previewing = false; nextRound(); });
+  $('btnPreview').addEventListener('click', togglePreview);
+
+  const input = $('guess');
+  input.addEventListener('input', renderSuggest);
+  input.addEventListener('focus', () => { if (input.value) renderSuggest(); setTimeout(() => input.scrollIntoView && input.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveSuggest(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveSuggest(-1); }
+    else if (e.key === 'Escape') { closeSuggest(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!suggestItems.length) renderSuggest();
+      const pick = suggestItems[suggestIdx];
+      if (pick) submitGuess(pick);
+    }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#searchBox')) closeSuggest(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModals();
+    if (e.key === 'Enter' && round && (round.status === 'won' || round.status === 'gaveup') && $('modalStats').hidden && $('modalInfo').hidden && document.activeElement === document.body) {
+      previewing = false; nextRound();
+    }
+  });
+
+  renderMenu();
+  setRing(0);
+}
+init();
+</script>
+</body>
+</html>
