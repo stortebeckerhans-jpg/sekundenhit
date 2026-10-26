@@ -84,6 +84,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-o
 .mini-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700}
 .mini-btn.active{border-color:transparent;background:var(--grad);color:#fff}
 .pool{margin:12px 2px 0;color:var(--muted);font-size:13px}
+.hero .byline{margin:4px auto 0;font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--accent2)}
+.credit{text-align:center;color:#6f6f8f;font-size:12px;font-weight:600;letter-spacing:.16em;margin:18px 0 0}
 .menu-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:6px}
 .check{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;margin-top:6px;cursor:pointer}
 .check input{accent-color:var(--accent);width:16px;height:16px}
@@ -206,6 +208,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-o
     <header class="hero">
       <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <h1>Sekundenhit</h1>
+      <p class="byline">byEinHomie</p>
       <p>Wie viele Sekunden brauchst du, um den deutschen Song zu erkennen?</p>
     </header>
 
@@ -234,6 +237,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-o
       <button class="link-btn" id="btnInfo">ℹ️ Songs &amp; Audio</button>
     </div>
     <label class="check"><input type="checkbox" id="demoOnly"> Nur Demo-Töne (ohne Internet testen)</label>
+    <p class="credit">byEinHomie</p>
   </section>
 
   <!-- ===================== SPIEL ===================== -->
@@ -302,6 +306,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-o
     <div class="sheet-head"><h3>📊 Deine Statistik</h3><button class="icon-btn" data-close aria-label="Schließen">✕</button></div>
     <div class="tiles" id="statTiles"></div>
     <button class="btn ghost" id="btnResetStats">Statistik zurücksetzen</button>
+    <button class="btn ghost" id="btnResetHistory">Gespielte Songs zurücksetzen</button>
   </div>
 </div>
 
@@ -351,7 +356,8 @@ const CONFIG = {
   STORAGE: {
     stats: 'sekundenhit.stats.v1',
     settings: 'sekundenhit.settings.v1',
-    audioCache: 'sekundenhit.audiocache.v1'
+    audioCache: 'sekundenhit.audiocache.v1',
+    history: 'sekundenhit.history.v1'
   }
 };
 
@@ -767,6 +773,18 @@ settings.genres = (settings.genres || []).filter(g => GENRE_KEYS.includes(g));
 if (!settings.genres.length) settings.genres = GENRE_KEYS.slice();
 if (!['easy', 'medium', 'hard'].includes(settings.difficulty)) settings.difficulty = 'easy';
 
+/** Merkt sich gespielte Songs dauerhaft (auch nach Neustart oder Zurück ins Menü), damit sich Songs nicht wiederholen, bis der ganze Pool einmal durch ist. */
+const SeenStore = {
+  ids: new Set(((Store.load(CONFIG.STORAGE.history, { ids: [] }).ids) || []).filter(x => typeof x === 'string')),
+  add(id) { this.ids.add(id); this.save(); },
+  save() {
+    let arr = Array.from(this.ids);
+    if (arr.length > 800) { arr = arr.slice(-800); this.ids = new Set(arr); }
+    Store.save(CONFIG.STORAGE.history, { ids: arr });
+  },
+  clear() { this.ids = new Set(); this.save(); }
+};
+
 /* =====================================================================
    5. AUDIO-ENGINE (WebAudio für sekundengenaue Ausschnitte, Fallback: <audio>)
    ===================================================================== */
@@ -951,12 +969,15 @@ const AudioEngine = (() => {
 
     // Fallback: <audio>-Element (z. B. wenn der Server kein CORS erlaubt)
     const a = track.el;
+    token.el = a;
+    token.stop = () => { try { a.pause(); } catch (e) {} };
     try { a.pause(); a.currentTime = track.offset || 0; } catch (e) {}
     const started = new Promise((res) => { const hnd = () => { a.removeEventListener('playing', hnd); res(); }; a.addEventListener('playing', hnd); setTimeout(res, 4000); });
     try { const pr = a.play(); if (pr && pr.then) await pr; }
-    catch (e) { if (active === token) active = null; cb.onBlocked && cb.onBlocked(); return false; }
+    catch (e) { if (active !== token) return false; active = null; cb.onBlocked && cb.onBlocked(); return false; }   // veralteter Start: nichts melden
     await started;                                       // Zeit erst ab echtem Klangbeginn messen
-    if (active !== token) { try { a.pause(); } catch (e) {} return false; }
+    // Hat inzwischen ein neuer Ausschnitt dasselbe Element übernommen, darf der alte es nicht pausieren
+    if (active !== token) { if (!active || active.el !== a) { try { a.pause(); } catch (e) {} } return false; }
     const t0 = performance.now();
     token.stop = () => { try { a.pause(); } catch (e) {} };
     cb.onStart && cb.onStart();
@@ -1137,10 +1158,12 @@ function saveSettings() { Store.save(CONFIG.STORAGE.settings, settings); }
 function pickSong() {
   const pool = poolFor(settings.difficulty, new Set(settings.genres));
   if (!pool.length) return null;
-  let cand = pool.filter(s => !session.played.has(s.id));
-  if (!cand.length) {                                   // alles gespielt → Verlauf zurücksetzen, letzte Songs bleiben gesperrt
-    const n = Math.min(3, pool.length - 1);
-    session.played = new Set(n > 0 ? session.history.slice(-n) : []);
+  let cand = pool.filter(s => !session.played.has(s.id) && !SeenStore.ids.has(s.id));
+  if (!cand.length) {                                   // alle Songs dieses Pools gespielt → Pool wieder freigeben, die letzten 3 bleiben gesperrt
+    const keep = new Set(session.history.slice(-Math.min(3, pool.length - 1)));
+    pool.forEach(s => { if (!keep.has(s.id)) SeenStore.ids.delete(s.id); });
+    SeenStore.save();
+    session.played = new Set(keep);
     cand = pool.filter(s => !session.played.has(s.id));
   }
   const s = cand[Math.floor(Math.random() * cand.length)];
@@ -1188,6 +1211,7 @@ async function beginRound() {
   }
   round.song = song;
   round.audio = audio;
+  SeenStore.add(song.id);
   round.status = 'playing';
   render();
   playCurrent();
@@ -1566,6 +1590,7 @@ function init() {
   $('btnResetStats').addEventListener('click', () => {
     if (confirm('Statistik wirklich zurücksetzen?')) { stats = Object.assign({}, DEFAULT_STATS); saveStats(); openStats(); render(); }
   });
+  $('btnResetHistory').addEventListener('click', () => { SeenStore.clear(); toast('Verlauf gelöscht – alle Songs können wieder kommen', 'good'); });
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', (e) => { if (e.target === m || e.target.hasAttribute('data-close')) closeModals(); }));
 
   $('disc').addEventListener('click', () => { AudioEngine.unlock(); playCurrent(); });   // erneutes Anhören: KEIN Skip
