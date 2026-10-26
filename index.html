@@ -347,6 +347,7 @@ const CONFIG = {
   INTRO_WEIGHT: 0.5,                  // Gewicht von introDifficulty im Schwierigkeits-Score
   DIFFICULTY_LIMITS: { easyBelow: 3.5, hardFrom: 5.0 },
   ITUNES: { enabled: true, country: 'DE', cacheDays: 7 },
+  DEEZER: { enabled: true },
   STORAGE: {
     stats: 'sekundenhit.stats.v1',
     settings: 'sekundenhit.settings.v1',
@@ -784,8 +785,23 @@ const AudioEngine = (() => {
     return ctx;
   }
 
+  const SILENT = 'data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUAGAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+  const elPool = []; let elIdx = 0;
+  /** Audio-Elemente im Klick "freischalten": iPhones erlauben spätere Wiedergabe nur für Elemente, die einmal per Tap gestartet wurden. */
+  function unlockElements() {
+    if (!elPool.length) { for (let i = 0; i < 6; i++) { const a = new Audio(); a.preload = 'auto'; a.playsInline = true; elPool.push(a); } }
+    elPool.forEach((a) => { try { a.src = SILENT; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {} });
+  }
+  function nextElement() {
+    if (!elPool.length) { const a = new Audio(); a.playsInline = true; return a; }
+    const a = elPool[elIdx++ % elPool.length];
+    try { a.pause(); } catch (e) {}
+    return a;
+  }
+
   /** Muss direkt in einem Klick/Tap aufgerufen werden (Browser-Autoplay-Regeln, iOS). */
   function unlock() {
+    try { unlockElements(); } catch (e) {}
     const c = getCtx();
     if (!c) return;
     try { if (c.state !== 'running') c.resume(); } catch (e) {}
@@ -810,31 +826,41 @@ const AudioEngine = (() => {
     } finally { clearTimeout(t); }
   }
 
+  /** Einfache Wiedergabe über ein <audio>-Element (läuft auch ohne CORS-Freigabe). Auf dem iPhone feuern Lade-Events oft erst beim Abspielen, daher nach 3 s trotzdem weiter. */
   function loadElement(url, offset) {
     return new Promise((resolve, reject) => {
-      const a = new Audio();
-      a.preload = 'auto';
+      const a = nextElement();
       a.volume = 0.9;
-      const timer = setTimeout(() => { cleanup(); reject(new Error('Audio-Timeout')); }, 15000);
-      function cleanup() { clearTimeout(timer); a.removeEventListener('canplay', ok); a.removeEventListener('error', fail); }
-      function ok() { cleanup(); resolve({ kind: 'element', el: a, offset: offset || 0, duration: (isFinite(a.duration) ? a.duration : 30) - (offset || 0) }); }
-      function fail() { cleanup(); reject(new Error('Audio-Fehler')); }
-      a.addEventListener('canplay', ok, { once: true });
-      a.addEventListener('error', fail, { once: true });
+      let settled = false;
+      const timer = setTimeout(() => done(new Error('Audio-Zeitüberschreitung')), 15000);
+      const soft = setTimeout(() => done(null), 3000);
+      function done(err) {
+        if (settled) return;
+        settled = true; clearTimeout(timer); clearTimeout(soft);
+        a.removeEventListener('canplay', onOk); a.removeEventListener('loadedmetadata', onOk); a.removeEventListener('error', onErr);
+        if (err) reject(err);
+        else resolve({ kind: 'element', el: a, offset: offset || 0, duration: (isFinite(a.duration) && a.duration > 0 ? a.duration : 30) - (offset || 0) });
+      }
+      const onOk = () => done(null);
+      const onErr = () => done(new Error('Audio-Fehler (Datei nicht ladbar)'));
+      a.addEventListener('canplay', onOk); a.addEventListener('loadedmetadata', onOk); a.addEventListener('error', onErr);
       a.src = url;
-      a.load();
+      try { a.load(); } catch (e) {}
     });
+  }
+
+  /** Präzise Wiedergabe: Datei laden und dekodieren (braucht CORS-Freigabe des Servers). */
+  async function loadBufferTrack(url, offset) {
+    offset = offset || 0;
+    if (!getCtx()) throw new Error('Kein WebAudio verfügbar');
+    const buf = await decode(await fetchBuffer(url));
+    return { kind: 'buffer', buffer: buf, offset, duration: Math.max(0.1, buf.duration - offset) };
   }
 
   /** Lädt eine Audioquelle. Bevorzugt dekodierte Buffer (präzise), sonst <audio>-Element. */
   async function loadTrack(url, offset) {
     offset = offset || 0;
-    if (getCtx()) {
-      try {
-        const buf = await decode(await fetchBuffer(url));
-        return { kind: 'buffer', buffer: buf, offset, duration: Math.max(0.1, buf.duration - offset) };
-      } catch (e) { /* z. B. CORS → Fallback unten */ }
-    }
+    try { return await loadBufferTrack(url, offset); } catch (e) { /* z. B. CORS → Fallback unten */ }
     return loadElement(url, offset);
   }
 
@@ -926,8 +952,10 @@ const AudioEngine = (() => {
     // Fallback: <audio>-Element (z. B. wenn der Server kein CORS erlaubt)
     const a = track.el;
     try { a.pause(); a.currentTime = track.offset || 0; } catch (e) {}
+    const started = new Promise((res) => { const hnd = () => { a.removeEventListener('playing', hnd); res(); }; a.addEventListener('playing', hnd); setTimeout(res, 4000); });
     try { const pr = a.play(); if (pr && pr.then) await pr; }
     catch (e) { if (active === token) active = null; cb.onBlocked && cb.onBlocked(); return false; }
+    await started;                                       // Zeit erst ab echtem Klangbeginn messen
     if (active !== token) { try { a.pause(); } catch (e) {} return false; }
     const t0 = performance.now();
     token.stop = () => { try { a.pause(); } catch (e) {} };
@@ -943,7 +971,7 @@ const AudioEngine = (() => {
     return true;
   }
 
-  return { unlock, loadTrack, synthTrack, play, stop };
+  return { unlock, loadTrack, loadBufferTrack, loadElement, synthTrack, play, stop };
 })();
 
 /* =====================================================================
@@ -956,26 +984,37 @@ const AudioEngine = (() => {
    ===================================================================== */
 function jsonp(url, timeout) {
   return new Promise((resolve, reject) => {
-    const cb = '__sh_cb_' + Math.random().toString(36).slice(2);
+    const cb = 'shcb' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
     const s = document.createElement('script');
-    const t = setTimeout(() => { cleanup(); reject(new Error('JSONP-Timeout')); }, timeout || 9000);
-    function cleanup() { clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } s.remove(); }
-    window[cb] = (data) => { cleanup(); resolve(data); };
-    s.onerror = () => { cleanup(); reject(new Error('JSONP-Fehler')); };
-    s.src = url + '&callback=' + cb;
+    let done = false;
+    const t = setTimeout(() => fail('Zeitüberschreitung'), timeout || 9000);
+    function cleanup() { clearTimeout(t); done = true; try { delete window[cb]; } catch (e) { window[cb] = undefined; } s.remove(); }
+    function fail(msg) { if (done) return; cleanup(); reject(new Error(msg)); }
+    window[cb] = (data) => { if (done) return; cleanup(); resolve(data); };
+    s.onerror = () => fail('Skript blockiert oder nicht erreichbar');
+    s.onload = () => fail('Skript geladen, aber keine Antwort');   // läuft erst nach dem Skript; hat der Callback geantwortet, ist done schon true
+    s.async = true;
+    try { s.referrerPolicy = 'no-referrer'; } catch (e) {}
+    s.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cb;
     document.head.appendChild(s);
   });
 }
-async function fetchJson(url) {
+/** Lädt JSON: erst per fetch (CORS), sonst per Skript-Einbindung (JSONP). Bei Fehlschlag steht in der Meldung, warum beides nicht ging. */
+async function fetchJson(url, opts) {
+  const o = opts || {};
+  const errs = [];
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 9000);
+    const t = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const res = await fetch(url, { signal: ctrl.signal });
+      const res = await fetch(url, { signal: ctrl.signal, referrerPolicy: 'no-referrer' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return await res.json();
     } finally { clearTimeout(t); }
-  } catch (e) { return await jsonp(url); }   // Fallback ohne CORS
+  } catch (e) { errs.push('fetch: ' + (e && e.name === 'AbortError' ? 'Zeitüberschreitung' : ((e && e.message) || 'Fehler'))); }
+  try { return await jsonp(url + (o.jsonpSuffix || '')); }
+  catch (e) { errs.push('jsonp: ' + ((e && e.message) || 'Fehler')); }
+  throw new Error(errs.join(' | '));
 }
 
 const audioCache = Store.load(CONFIG.STORAGE.audioCache, {});
@@ -990,7 +1029,8 @@ function cacheSet(id, v) { audioCache[id] = Object.assign({}, v, { t: Date.now()
 
 const mainTitle = (t) => t.replace(/\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim();
 const overlap = (tokens, set) => { if (!tokens.length) return 0; let n = 0; tokens.forEach(t => { if (set.has(t)) n++; }); return n / tokens.length; };
-function pickItunesMatch(results, song) {
+/** Wählt aus den Suchergebnissen den passenden Song (Titel + Interpret müssen stimmen, Live/Karaoke-Fassungen werden abgewertet). */
+function pickMatch(results, song) {
   const tTok = fold(mainTitle(song.title)).split(' ').filter(Boolean);
   let aTok = fold(song.artist).split(' ').filter(w => w.length > 2 && !['und', 'feat', 'the'].includes(w));
   if (!aTok.length) aTok = fold(song.artist).split(' ').filter(Boolean);
@@ -1008,57 +1048,75 @@ function pickItunesMatch(results, song) {
   }
   return best;
 }
+const normalizeItunes = (d) => ((d && d.results) || []).map(r => ({ trackName: r.trackName, artistName: r.artistName, collectionArtistName: r.collectionArtistName, previewUrl: r.previewUrl, cover: (r.artworkUrl100 || '').replace('100x100', '400x400') }));
+const normalizeDeezer = (d) => ((d && d.data) || []).map(r => ({ trackName: r.title, artistName: (r.artist && r.artist.name) || '', collectionArtistName: '', previewUrl: r.preview, cover: (r.album && (r.album.cover_big || r.album.cover_medium)) || '' }));
+
+/** Gemeinsame Suche für Dienste mit Vorschau-Clips. cfg: { id, url(song), normalize(data), opts } */
+async function searchProvider(song, cfg) {
+  const key = cfg.id + '|' + song.id;
+  const cached = cacheGet(key);
+  if (cached) return cached.miss ? null : { url: cached.url, cover: cached.cover, offset: 0 };
+  let data;
+  try { data = await fetchJson(cfg.url(song), cfg.opts); }
+  catch (e) { const err = new Error((e && e.message) || 'nicht erreichbar'); err.network = true; throw err; }
+  if (data && (data.error || data.errorMessage)) {
+    const m = data.errorMessage || (data.error && (data.error.message || data.error.type)) || 'Fehler';
+    const err = new Error('Dienst meldet: ' + m); err.network = true; throw err;
+  }
+  const hit = pickMatch(cfg.normalize(data), song);
+  if (!hit) { cacheSet(key, { miss: true }); return null; }
+  const out = { url: hit.previewUrl, cover: hit.cover || '' };
+  cacheSet(key, out);
+  return { url: out.url, cover: out.cover, offset: 0 };
+}
+
+const ITUNES_CFG = {
+  id: 'itunes', normalize: normalizeItunes,
+  url: (song) => 'https://itunes.apple.com/search?media=music&entity=song&limit=10&country=' + CONFIG.ITUNES.country + '&term=' + encodeURIComponent(song.artist + ' ' + song.title)
+};
+const DEEZER_CFG = {
+  id: 'deezer', normalize: normalizeDeezer, opts: { jsonpSuffix: '&output=jsonp' },
+  url: (song) => 'https://api.deezer.com/search?limit=10&q=' + encodeURIComponent(song.artist + ' ' + mainTitle(song.title))
+};
 
 const AUDIO_PROVIDERS = [
   {
     id: 'url', label: 'Eigene Audioquelle',
     async resolve(song) { return song.audioUrl ? { url: song.audioUrl, offset: song.audioStart, cover: song.coverUrl } : null; }
   },
-  {
-    id: 'itunes', label: 'Apple iTunes-Vorschau',
-    enabled: () => CONFIG.ITUNES.enabled,
-    async resolve(song) {
-      const cached = cacheGet(song.id);
-      if (cached) return cached.miss ? null : { url: cached.url, cover: cached.cover, offset: 0 };
-      const term = song.artist + ' ' + song.title;
-      const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=10&country=' + CONFIG.ITUNES.country + '&term=' + encodeURIComponent(term);
-      let data;
-      try { data = await fetchJson(url); }
-      catch (e) { const err = new Error('iTunes nicht erreichbar'); err.network = true; throw err; }
-      const hit = pickItunesMatch((data && data.results) || [], song);
-      if (!hit) { cacheSet(song.id, { miss: true }); return null; }
-      const out = { url: hit.previewUrl, cover: (hit.artworkUrl100 || '').replace('100x100', '400x400') };
-      cacheSet(song.id, out);
-      return { url: out.url, cover: out.cover, offset: 0 };
-    }
-  }
+  { id: 'itunes', label: 'Apple iTunes-Vorschau', enabled: () => CONFIG.ITUNES.enabled, resolve: (song) => searchProvider(song, ITUNES_CFG) },
+  { id: 'deezer', label: 'Deezer-Vorschau', enabled: () => CONFIG.DEEZER.enabled, resolve: (song) => searchProvider(song, DEEZER_CFG) }
 ];
 
 const providerDownUntil = {};
+const providerLastError = {};
 /** Liefert { track, source, label, cover } oder null (wenn allowDemo=false und keine echte Quelle gefunden wurde). */
 async function resolveAudio(song, opts) {
   const o = Object.assign({ demoOnly: false, allowDemo: true }, opts);
-  const issues = [];                                     // Gründe, warum keine echte Quelle klappte (für die Anzeige)
+  const issues = [], details = [];                       // Gründe, warum keine echte Quelle klappte (für die Anzeige)
   try {
     if (!o.demoOnly) {
       for (const p of AUDIO_PROVIDERS) {
         if (p.enabled && !p.enabled()) continue;
-        if ((providerDownUntil[p.id] || 0) > Date.now()) { issues.push(p.id + ':network'); continue; }
+        if ((providerDownUntil[p.id] || 0) > Date.now()) { issues.push(p.id + ':network'); details.push(p.id + ' → ' + (providerLastError[p.id] || 'pausiert')); continue; }
         try {
           const hit = await p.resolve(song);
           if (!hit) { if (p.id !== 'url') issues.push(p.id + ':nomatch'); continue; }
           const track = await AudioEngine.loadTrack(hit.url, hit.offset || 0);
           return { track, source: p.id, label: p.label, cover: song.coverUrl || hit.cover || '' };
         } catch (e) {
+          const msg = (e && e.message) || 'Fehler';
           issues.push(p.id + (e && e.network ? ':network' : ':load'));
+          details.push(p.id + ' → ' + msg);
+          providerLastError[p.id] = msg;
           if (e && e.network) providerDownUntil[p.id] = Date.now() + 60000;   // 60 s Pause bei Netzproblemen
-          console.warn('[audio]', p.id, song.title, e && e.message);
+          console.warn('[audio]', p.id, song.title, msg);
         }
       }
     }
     if (!o.allowDemo && !o.demoOnly) return null;
     return { track: AudioEngine.synthTrack(song.id), source: 'demo', label: 'Demo-Ton (kein echter Song)', cover: song.coverUrl || '',
-             issue: o.demoOnly ? 'demoOnly' : issues.join(' ') };
+             issue: o.demoOnly ? 'demoOnly' : issues.join(' '), detail: details.join(' · ') };
   } catch (e) { console.warn('[audio] fatal', e); return null; }
 }
 
@@ -1136,13 +1194,17 @@ async function beginRound() {
   prefetchNext();
 }
 
-function demoReason(issue) {
-  const s = String(issue || '');
+function demoReason(issue, detail) {
+  const s = String(issue || '').trim();
   if (s === 'demoOnly') return 'Grund: Im Menü ist „Nur Demo-Töne“ angehakt – Haken entfernen.';
-  if (s.includes('itunes:network')) return 'Grund: Apple (iTunes) ist von hier aus nicht erreichbar. Öffne die Datei direkt im Browser (Chrome, Edge, Firefox, Safari) und nicht in einer Vorschau. Mehr Infos: Menü → „Songs & Audio“ → „Verbindung testen“.';
-  if (s.includes('itunes:load')) return 'Grund: Die Vorschau wurde gefunden, ließ sich aber nicht laden. Menü → „Songs & Audio“ → „Verbindung testen“ zeigt mehr.';
-  if (s.includes('itunes:nomatch')) return 'Grund: Für diesen Song gab es bei Apple keine Vorschau.';
-  return 'Grund unbekannt – Menü → „Songs & Audio“ → „Verbindung testen“.';
+  const NAMES = { itunes: 'Apple', deezer: 'Deezer' };
+  const MSG = { network: 'nicht erreichbar', nomatch: 'kein Treffer', load: 'Vorschau nicht ladbar' };
+  if (!s) return 'Grund unbekannt – Menü → „Songs & Audio“ → „Verbindung testen“.';
+  const parts = s.split(/\s+/).map((tok) => { const a = tok.split(':'); return (NAMES[a[0]] || a[0]) + ': ' + (MSG[a[1]] || a[1]); });
+  let t = 'Grund: ' + parts.join(' · ') + '.';
+  if (s.indexOf(':network') >= 0) t += ' Öffne die Seite direkt im Browser und starte unter „Songs & Audio“ den Verbindungstest.';
+  if (detail) t += ' [' + String(detail).slice(0, 280) + ']';
+  return t;
 }
 
 function nextRound() { session.round++; beginRound(); }
@@ -1253,7 +1315,7 @@ function render() {
   $('status').textContent = loading ? 'Song wird geladen…' : 'Höre genau hin – oder skippe für mehr Zeit.';
   const isDemo = !!(r.audio && r.audio.source === 'demo');
   $('demoNote').hidden = !isDemo;
-  if (isDemo) $('demoNote').textContent = '🎧 Testmelodie statt echtem Song. ' + demoReason(r.audio.issue);
+  if (isDemo) $('demoNote').textContent = '🎧 Testmelodie statt echtem Song. ' + demoReason(r.audio.issue, r.audio.detail);
 
   // Bedienelemente
   const last = r.level >= L.length - 1;
@@ -1421,24 +1483,45 @@ async function runDiagnostics() {
   btn.disabled = true; btn.textContent = 'Teste …';
   Object.keys(providerDownUntil).forEach(k => delete providerDownUntil[k]);
   const add = (ok, text) => out.appendChild(el('li', ok ? 'ok' : 'bad', (ok ? '✓ ' : '✗ ') + text));
+  const msgOf = (e) => (e && e.name === 'AbortError') ? 'Zeitüberschreitung' : ((e && e.message) || 'Fehler');
+  const timed = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Zeitüberschreitung')), ms))]);
+  async function check(label, fn) { try { add(true, label + ': ' + await fn()); return true; } catch (e) { add(false, label + ': ' + msgOf(e)); return false; } }
   AudioEngine.unlock();
+
   let embedded = false;
   try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
-  add(!embedded, embedded ? 'Die Seite läuft in einer eingebetteten Vorschau. Dort sind Internetzugriffe oft gesperrt – öffne die Datei direkt im Browser.' : 'Die Seite läuft direkt im Browser.');
+  add(!embedded, embedded ? 'Die Seite läuft in einer eingebetteten Vorschau. Dort sind Internetzugriffe oft gesperrt – öffne sie direkt im Browser.' : 'Die Seite läuft direkt im Browser.');
   add(navigator.onLine !== false, navigator.onLine === false ? 'Das Gerät meldet: kein Internet.' : 'Das Gerät meldet: Internet vorhanden.');
-  let hit = null;
-  try {
-    const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=5&country=' + CONFIG.ITUNES.country + '&term=' + encodeURIComponent('Apache 207 Roller');
-    const data = await fetchJson(url);
-    const res = (data && data.results) || [];
-    add(res.length > 0, res.length > 0 ? 'Apple-Suche erreichbar (' + res.length + ' Treffer).' : 'Apple-Suche erreichbar, aber ohne Treffer.');
-    hit = res.find(r => r.previewUrl) || null;
-  } catch (e) { add(false, 'Apple-Suche nicht erreichbar (' + ((e && e.message) || 'Fehler') + ').'); }
-  if (hit) {
-    try {
-      const t = await AudioEngine.loadTrack(hit.previewUrl, 0);
-      add(true, 'Vorschau geladen (' + Math.round(t.duration) + ' s, ' + (t.kind === 'buffer' ? 'präzise Wiedergabe' : 'einfache Wiedergabe') + ').');
-    } catch (e) { add(false, 'Vorschau konnte nicht geladen werden (' + ((e && e.message) || 'Fehler') + ').'); }
+
+  const enc = encodeURIComponent('Apache 207 Roller');
+  const itu = 'https://itunes.apple.com/search?media=music&entity=song&limit=5&country=' + CONFIG.ITUNES.country + '&term=' + enc;
+  const dz = 'https://api.deezer.com/search?limit=5&q=' + enc;
+  let previewUrl = '';
+
+  await check('Internet allgemein', async () => { const r = await timed(fetch('https://api.github.com/zen', { cache: 'no-store' }), 8000); if (!r.ok) throw new Error('HTTP ' + r.status); return 'ok'; });
+  await check('Apple-Suche, Weg 1 (direkt)', async () => {
+    const r = await timed(fetch(itu), 8000); if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json(); const n = (d.results || []).length;
+    const hit = (d.results || []).find(x => x.previewUrl); if (hit && !previewUrl) previewUrl = hit.previewUrl;
+    if (!n) throw new Error('keine Treffer'); return n + ' Treffer';
+  });
+  await check('Apple-Suche, Weg 2 (Ersatzweg)', async () => {
+    const d = await jsonp(itu); const n = (d.results || []).length;
+    const hit = (d.results || []).find(x => x.previewUrl); if (hit && !previewUrl) previewUrl = hit.previewUrl;
+    if (!n) throw new Error('keine Treffer'); return n + ' Treffer';
+  });
+  let dzPreview = '';
+  await check('Deezer-Suche', async () => {
+    let d;
+    try { const r = await timed(fetch(dz), 8000); if (!r.ok) throw new Error('HTTP ' + r.status); d = await r.json(); }
+    catch (e) { d = await jsonp(dz + '&output=jsonp'); }
+    const arr = d.data || []; const hit = arr.find(x => x.preview); if (hit) dzPreview = hit.preview;
+    if (!arr.length) throw new Error('keine Treffer'); return arr.length + ' Treffer';
+  });
+  const target = previewUrl || dzPreview;
+  if (target) {
+    await check('Vorschau laden, präzise', async () => { const t = await timed(AudioEngine.loadBufferTrack(target, 0), 15000); return Math.round(t.duration) + ' s geladen'; });
+    await check('Vorschau laden, einfach', async () => { const t = await AudioEngine.loadElement(target, 0); return 'bereit (' + Math.round(t.duration) + ' s)'; });
   }
   btn.disabled = false; btn.textContent = 'Verbindung erneut testen';
 }
